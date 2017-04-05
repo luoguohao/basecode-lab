@@ -21,7 +21,7 @@ public class AppClientMain {
 		System.out.println("zkHosts:"+zkHosts +"\t zkPath:"+zkPath);
 
 		String zkFullPath = String.format("zk!%s!%s",zkHosts,zkPath);
-		ServiceFactory<ThriftClientRequest,byte[]> factory = Thrift.newClient(zkFullPath);
+		ServiceFactory<ThriftClientRequest,byte[]> factory = (ServiceFactory<ThriftClientRequest, byte[]>) Thrift.newClient(zkFullPath);
 
 		for( int i=0;i<100;i++){
 			Hello.ServiceIface helloClient = new Hello.ServiceToClient(factory.toService(),new TBinaryProtocol.Factory());
