@@ -1,5 +1,6 @@
 package com.luogh.learning.lab.demo.geo_fetch_from_baidu;
 
+import com.alibaba.fastjson.JSONObject;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -11,8 +12,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import net.sf.json.JSONObject;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.client.ClientProtocolException;
@@ -189,7 +188,7 @@ class BaiduFetcher implements Runnable {
 			                	resposeContent = EntityUtils.toString(entity);
 			                	
 			                	
-			                	jsonObj = JSONObject.fromObject(resposeContent);
+			                	jsonObj = JSONObject.parseObject(resposeContent);
 			                	
 			                	JSONObject tmpJsonObj = null;
 			                	
@@ -243,7 +242,7 @@ class BaiduFetcher implements Runnable {
 	}
 	
 	private static void resetJsonValue(JSONObject jsonObj,String key){
-		jsonObj.element(key,decodeUnicode(jsonObj.getString(key)));
+		jsonObj.put(key,decodeUnicode(jsonObj.getString(key)));
 	}
 	
 	private static String decodeUnicode(String theString){
