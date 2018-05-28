@@ -11,5 +11,14 @@
 
   <artifactId>hbase</artifactId>
 
+  <dependencies>
+    <!-- https://mvnrepository.com/artifact/org.apache.hbase/hbase-client -->
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-client</artifactId>
+    <!--<version>1.2.6</version>-->
+      <version>1.1.5</version>
+    </dependency>
+  </dependencies>
 
 </project>
