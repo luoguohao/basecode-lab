@@ -1,13 +1,25 @@
 package com.luogh.learning.lab.hbase;
 
+import static com.luogh.learning.lab.hbase.constant.HbaseConstants.EXECUTOR_POOL_SIZE;
+
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.luogh.learning.lab.hbase.constant.HbaseConstants;
+import com.luogh.learning.lab.hbase.util.MD5Utils;
 import com.luogh.learning.lab.hbase.util.Utils;
 import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import javax.sql.PooledConnection;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.Charsets;
 import org.apache.hadoop.conf.Configuration;
@@ -15,15 +27,17 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.BufferedMutator;
+import org.apache.hadoop.hbase.client.BufferedMutatorParams;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
@@ -53,6 +67,7 @@ public class HbaseClientTest {
   @Before
   public void init() {
     configuration = HBaseConfiguration.create();
+    configuration.setInt("hbase.client.scanner.timeout.period", 6000000);
     ThreadFactory threadFactory = new ThreadFactoryBuilder()
         .setDaemon(true).setNameFormat("hbase-client-%d").build();
     executorService = Executors.newCachedThreadPool(threadFactory);
@@ -138,7 +153,8 @@ public class HbaseClientTest {
         try (Table table = conn.getTable(TableName.valueOf("tag_bitmap"))) {
 
           FilterList filterList = new FilterList();
-          Filter rowkeyFilter = new PrefixFilter(Bytes.toBytes("bestselleryszh930_last_year_buy_category_attribute.+"));
+          Filter rowkeyFilter = new PrefixFilter(
+              Bytes.toBytes("bestselleryszh930_last_year_buy_category_attribute.+"));
 //          Filter limitFilter = new PageFilter(1000);
           filterList.addFilter(rowkeyFilter);
 //          filterList.addFilter(limitFilter);
@@ -170,7 +186,7 @@ public class HbaseClientTest {
 
   @Test
   public void testRowRegexPatternQuery() throws Exception {
-    Stopwatch stopwatch = new Stopwatch();
+    Stopwatch stopwatch = new Stopwatch().start();
     try (PrintWriter writer = new PrintWriter("rowkey_bitmap_size.csv",
         Charsets.UTF_8.displayName())) {
       try (Connection conn = ConnectionFactory.createConnection(configuration, executorService)) {
@@ -203,48 +219,202 @@ public class HbaseClientTest {
           }
         }
       }
-      System.out.println("query total cost " + stopwatch.elapsedTime(TimeUnit.SECONDS) + " s");
+      System.out
+          .println("query total cost " + stopwatch.stop().elapsedTime(TimeUnit.SECONDS) + " s");
       writer.flush();
     }
   }
 
 
   @Test
-  public void createTableTest() throws Exception {
-    try (Connection conn = ConnectionFactory.createConnection(configuration, executorService);
-        Admin admin = conn.getAdmin()) {
-//      admin.createNamespace(NamespaceDescriptor.create(TEST_PERF_SCHEMA_NAME).build());
-      if (!admin.tableExists(TableName.valueOf(TEST_PERF_SCHEMA_NAME, TEST_PERF_TABLE_NAME))) {
-        HTableDescriptor descriptor = new HTableDescriptor(
-            TableName.valueOf(TEST_PERF_SCHEMA_NAME, TEST_PERF_TABLE_NAME));
-        descriptor
-            .addFamily(new HColumnDescriptor(READ_COLUMN_FAMILY));  // read column family
-        descriptor
-            .addFamily(new HColumnDescriptor(WRITE_COLUMN_FAMILY));  // read column family
-        admin.createTable(descriptor);
-        log.info("table not exist, create new table {}.{} with two column {}, {}",
-            new String[]{TEST_PERF_SCHEMA_NAME, TEST_PERF_TABLE_NAME, READ_COLUMN_FAMILY, WRITE_COLUMN_FAMILY});
+  public void testPut() {
+    Stopwatch stopwatch = new Stopwatch().start();
+    Random rand = new Random();
+
+    try (Connection conn = ConnectionFactory.createConnection(configuration, executorService)) {
+      /** a callback invoked when an asynchronous write fails. */
+      final BufferedMutator.ExceptionListener listener = (e, mutator) -> {
+        for (int i = 0; i < e.getNumExceptions(); i++) {
+          log.info("Failed to sent put " + e.getRow(i) + ".");
+        }
+      };
+
+      BufferedMutatorParams params = new BufferedMutatorParams(
+          TableName.valueOf(TEST_PERF_SCHEMA_NAME,
+              TEST_PERF_TABLE_NAME_WITH_PRE_PARTITION))
+          .writeBufferSize(4 * 1024 * 1024)
+          .listener(listener);
+
+      try (final BufferedMutator mutator = conn.getBufferedMutator(params)) {
+        /** worker pool that operates on BufferedTable instances */
+        final ExecutorService workerPool = Executors.newFixedThreadPool(EXECUTOR_POOL_SIZE);
+        List<Future<Void>> futures = new ArrayList<>(100000);
+
+        for (int i = 0; i < 1000000; i++) {
+          futures.add(workerPool.submit(() -> {
+            //
+            // step 2: each worker sends edits to the shared BufferedMutator instance. They all use
+            // the same backing buffer, call-back "listener", and RPC executor pool.
+            //
+            String rowKey = String.format("%16x", rand.nextInt(Integer.MAX_VALUE));
+            Put put = new Put(Bytes.toBytes(MD5Utils.encodeByMD5(rowKey)));
+            put.addColumn(Bytes.toBytes(WRITE_COLUMN_FAMILY),
+                Bytes.toBytes(HbaseConstants.COLUMN_NAME), Bytes.toBytes(
+                    UUID.randomUUID().toString()));
+            put.addColumn(Bytes.toBytes(WRITE_COLUMN_FAMILY),
+                Bytes.toBytes(HbaseConstants.COLUMN_NAME), Bytes.toBytes(
+                    UUID.randomUUID().toString()));
+
+            mutator.mutate(put);
+            // do work... maybe you want to call mutator.flush() after many edits to ensure any of
+            // this worker's edits are sent before exiting the Callable
+            return null;
+          }));
+        }
+
+        //
+        // step 3: clean up the worker pool, shut down.
+        //
+        for (Future<Void> f : futures) {
+          f.get(5, TimeUnit.MINUTES);
+        }
+        workerPool.shutdown();
       }
+    } catch (Exception e) {
+      // exception while creating/destroying Connection or BufferedMutator
+      log.info("exception while creating/destroying Connection or BufferedMutator", e);
+    } // BufferedMutator.close() ensures all work is flushed. Could be the custom listener is
+    // invoked from here.
+    System.out.println("query total cost " + stopwatch.stop().elapsedTime(TimeUnit.SECONDS) + " s");
+  }
+
+
+  @Test
+  public void testBatchQuery() {
+    Stopwatch stopwatch = new Stopwatch().start();
+    Random rand = new Random();
+    int matchCount = 0;
+    try (
+        Connection conn = ConnectionFactory.createConnection(configuration, executorService);
+        Table table = conn.getTable(TableName.valueOf(TEST_PERF_SCHEMA_NAME,
+            TEST_PERF_TABLE_NAME_WITH_PRE_PARTITION))
+    ) {
+//      table.setOperationTimeout((int) TimeUnit.MINUTES.toMillis(5));
+      List<Get> gets = Lists.newArrayListWithCapacity(100000);
+      for (int i = 0; i < 100000; i++) {
+        Get get = new Get(Bytes
+            .toBytes(MD5Utils.encodeByMD5(String.format("%16x", rand.nextInt(Integer.MAX_VALUE)))));
+        get.setCacheBlocks(true);
+        gets.add(get);
+      }
+      Cell cell;
+      CellScanner cellScanner;
+      for (Result re : table.get(gets)) {
+        cellScanner = re.cellScanner();
+        while (cellScanner.advance()) {
+          matchCount++;
+          cell = cellScanner.current();
+          System.out.println(
+              "cell name:" + new String(CellUtil.cloneQualifier(cell)) + ", cell value:"
+                  + new String(CellUtil.cloneValue(cell)));
+        }
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+    System.out.println(
+        "query total cost " + stopwatch.stop().elapsedTime(TimeUnit.SECONDS) + " s, match count:"
+            + matchCount);
+  }
+
+
+  @Test
+  public void testBlockCache() {
+
+    int matchCount = 0;
+    try (
+        Connection conn = ConnectionFactory.createConnection(configuration, executorService);
+        Table table = conn.getTable(TableName.valueOf(TEST_PERF_SCHEMA_NAME,
+            TEST_PERF_TABLE_NAME_WITH_PRE_PARTITION))
+    ) {
+      Scan scan = new Scan();
+//      scan.setConsistency(Consistency.TIMELINE);
+      scan.setStartRow(Bytes.toBytes("33333333333333333333333333322220"));
+      scan.setStopRow( Bytes.toBytes("3333333333333333333333333333333F"));
+      scan.setMaxResultSize(100);
+      scan.setCaching(1000);
+      scan.setBatch(10000);
+      scan.setFilter(new KeyOnlyFilter());
+      scan.addFamily(Bytes.toBytes(HbaseConstants.WRITE_COLUMN_FAMILY));
+
+      List<Get> gets = Lists.newArrayList();
+      int resultCnt = 0;
+      for (Result result : table.getScanner(scan)) {
+        resultCnt++;
+        Get get = new Get(result.getRow());
+        get.setCacheBlocks(true);
+        gets.add(get);
+        if ( resultCnt % 1000 == 0) {
+          System.out.println("bucket with count : " + resultCnt);
+        }
+      }
+
+      System.out.println("scan result count:" + resultCnt);
+
+      int tryTime = 10;
+      for (int i = 0; i < tryTime; i++) {
+        Stopwatch stopwatch = new Stopwatch().start();
+        Cell cell;
+        CellScanner cellScanner;
+        for (Result re : table.get(gets)) {
+          cellScanner = re.cellScanner();
+          while (cellScanner.advance()) {
+            matchCount++;
+            cell = cellScanner.current();
+          }
+        }
+        System.out.println("query total cost " + stopwatch.stop().elapsedTime(TimeUnit.SECONDS)
+            + " s, match count:" + matchCount);
+        Thread.sleep(TimeUnit.SECONDS.toMillis(4));
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
     }
   }
 
+
   @Test
-  public void createTableWithPartitionKeyTest() throws Exception {
-    try (Connection conn = ConnectionFactory.createConnection(configuration, executorService);
-        Admin admin = conn.getAdmin()) {
-//      admin.createNamespace(NamespaceDescriptor.create(TEST_PERF_SCHEMA_NAME).build());
-      if (!admin.tableExists(TableName.valueOf(TEST_PERF_SCHEMA_NAME,
-          TEST_PERF_TABLE_NAME_WITH_PRE_PARTITION))) {
-        HTableDescriptor descriptor = new HTableDescriptor(
-            TableName.valueOf(TEST_PERF_SCHEMA_NAME, TEST_PERF_TABLE_NAME_WITH_PRE_PARTITION));
-        descriptor
-            .addFamily(new HColumnDescriptor(READ_COLUMN_FAMILY));  // read column family
-        descriptor
-            .addFamily(new HColumnDescriptor(WRITE_COLUMN_FAMILY));  // read column family
-        admin.createTable(descriptor);
-        log.info("table not exist, create new table {}.{} with two column {}, {}",
-            new String[]{TEST_PERF_SCHEMA_NAME, TEST_PERF_TABLE_NAME, READ_COLUMN_FAMILY, WRITE_COLUMN_FAMILY});
+  public void testMultiQuery() {
+    Stopwatch stopwatch = new Stopwatch().start();
+    Random rand = new Random();
+    int matchCount = 0;
+    try (
+        Connection conn = ConnectionFactory.createConnection(configuration, executorService);
+        Table table = conn.getTable(TableName.valueOf(TEST_PERF_SCHEMA_NAME,
+            TEST_PERF_TABLE_NAME_WITH_PRE_PARTITION))
+    ) {
+//      table.setOperationTimeout((int) TimeUnit.MINUTES.toMillis(5));
+      for (int i = 0; i < 10000000; i++) {
+        Get get = new Get(Bytes
+            .toBytes(MD5Utils.encodeByMD5(String.format("%16x", rand.nextInt(Integer.MAX_VALUE)))));
+        get.setCacheBlocks(true);
+        Cell cell;
+        CellScanner cellScanner;
+        Result re = table.get(get);
+        cellScanner = re.cellScanner();
+        while (cellScanner.advance()) {
+          matchCount++;
+          cell = cellScanner.current();
+          System.out.println(
+              "cell name:" + new String(CellUtil.cloneQualifier(cell)) + ", cell value:"
+                  + new String(CellUtil.cloneValue(cell)));
+        }
       }
+    } catch (Exception e) {
+      e.printStackTrace();
     }
-  }
+    System.out.println(
+        "query total cost " + stopwatch.stop().elapsedTime(TimeUnit.SECONDS) + " s, match count:"
+            + matchCount);
+  } // 结果很慢
 }
