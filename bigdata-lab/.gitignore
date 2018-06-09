@@ -2,3 +2,4 @@ bigdata-lab.iml
 /kafka/kafka.iml
 /storm/storm.iml
 /finagle/finagle.iml
+target/
