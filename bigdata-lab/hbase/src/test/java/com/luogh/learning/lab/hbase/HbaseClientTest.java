@@ -59,7 +59,7 @@ public class HbaseClientTest {
   private ExecutorService executorService;
   private static final String TEST_PERF_SCHEMA_NAME = "perf_test_schema";
   private static final String TEST_PERF_TABLE_NAME = "perf_test_table_normal";
-  private static final String TEST_PERF_TABLE_NAME_WITH_PRE_PARTITION = "perf_test_table_normal_with_partition_key";
+  private static final String TEST_PERF_TABLE_NAME_WITH_PRE_PARTITION = "perf_test_table_normal_with_partition_key_copy";
   private static final String READ_COLUMN_FAMILY = "r_cf";
   private static final String WRITE_COLUMN_FAMILY = "w_cf";
 
@@ -256,8 +256,7 @@ public class HbaseClientTest {
             // step 2: each worker sends edits to the shared BufferedMutator instance. They all use
             // the same backing buffer, call-back "listener", and RPC executor pool.
             //
-            String rowKey = String.format("%16x", rand.nextInt(Integer.MAX_VALUE));
-            Put put = new Put(Bytes.toBytes(MD5Utils.encodeByMD5(rowKey)));
+            Put put = new Put(Bytes.toBytes(MD5Utils.encodeByMD5(UUID.randomUUID().toString())));
             put.addColumn(Bytes.toBytes(WRITE_COLUMN_FAMILY),
                 Bytes.toBytes(HbaseConstants.COLUMN_NAME), Bytes.toBytes(
                     UUID.randomUUID().toString()));

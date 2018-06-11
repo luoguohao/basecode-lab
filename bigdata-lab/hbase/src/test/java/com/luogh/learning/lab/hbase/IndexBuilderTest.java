@@ -119,6 +119,7 @@ public class IndexBuilderTest extends Configured implements Tool {
   }
 
   /**
+   * perf_test_schema:perf_test_table_normal_with_partition_key w_cf value
    * Job configuration.
    */
   public static Job configureJob(Configuration conf, String [] args)

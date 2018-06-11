@@ -18,8 +18,7 @@ public class MD5Utils {
       try {
         MessageDigest md = MessageDigest.getInstance("MD5");
         byte[] results = md.digest(originString.getBytes());
-        String resultString = byteArrayToHexString(results);
-        return resultString.toUpperCase();
+        return byteArrayToHexString(results);
       } catch (Exception ex) {
         ex.printStackTrace();
       }
