@@ -10,20 +10,30 @@ import static com.luogh.learning.lab.hbase.constant.HbaseConstants.WRITE_COLUMN_
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.luogh.learning.lab.hbase.util.MD5Utils;
+import java.io.IOException;
 import java.math.BigInteger;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.ServerLoad;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.LoadBalancerProtos;
 import org.apache.hadoop.hbase.util.RegionSplitter;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -119,5 +129,55 @@ public class HbaseAdminTest {
   public void testHexSplitKey() {
     System.out.println(MD5Utils.encodeByMD5("test"));
     getHexSplits("00000000000000000000000000000000", "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 3);
+  }
+
+
+  @Test
+  public void testClusterState() throws Exception {
+    try (Connection conn = ConnectionFactory.createConnection(configuration, executorService);
+        Admin admin = conn.getAdmin()) {
+      ClusterStatus status = admin.getClusterStatus();
+      boolean isBalanceOn = status.isBalancerOn();
+      for ( ServerName serverName : status.getServers()) {
+        ServerLoad load = status.getLoad(serverName);
+        System.out.println("server name:" + serverName + " with load:" + load.getLoad());
+      }
+      System.out.println("status:" + status);
+    }
+  }
+
+
+  @Test
+  public void testReadZkNode() throws Exception {
+    Abortable abortable = new Abortable() {
+      @Override
+      public void abort(String why, Throwable e) {
+        throw new RuntimeException(why, e);
+      }
+
+      @Override
+      public boolean isAborted() {
+        return false;
+      }
+    };
+    ZooKeeperWatcher zooKeeper = new ZooKeeperWatcher(HBaseConfiguration.create(), "zk-node-reader", abortable, false);
+    byte[] data = ZKUtil.getData(zooKeeper, "/hbase/balancer");
+    LoadBalancerProtos.LoadBalancerState state = parseFrom(data);
+    System.out.println(state.getBalancerOn());
+  }
+
+
+  private LoadBalancerProtos.LoadBalancerState parseFrom(byte [] pbBytes)
+      throws DeserializationException {
+    ProtobufUtil.expectPBMagicPrefix(pbBytes);
+    LoadBalancerProtos.LoadBalancerState.Builder builder =
+        LoadBalancerProtos.LoadBalancerState.newBuilder();
+    try {
+      int magicLen = ProtobufUtil.lengthOfPBMagic();
+      ProtobufUtil.mergeFrom(builder, pbBytes, magicLen, pbBytes.length - magicLen);
+    } catch (IOException e) {
+      throw new DeserializationException(e);
+    }
+    return builder.build();
   }
 }
