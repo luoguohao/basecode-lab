@@ -34,13 +34,37 @@ public class ReferenceTest {
 
 
   @Test
-  public void testWeakReference() {
-    Object ref = new Object();
-    Reference<Object> weakReference = new WeakReference<>(ref);
-    assertSame(ref, weakReference.get());
-    ref = null;
+  public void testWeakReference() throws Exception {
+    ReferenceQueue<String> referenceQueue = new ReferenceQueue<>();
+    String reference = new String("test");
+    WeakReference<String> weakReference = new WeakReference<>(reference, referenceQueue);
+
+    System.out.println("going to collect " + reference.toString() + "with hashcode " + reference.hashCode());
+
+    new Thread(() -> {
+      while(isRun.get()) {
+        Object obj = referenceQueue.poll();
+        if (obj != null) {
+          try {
+            Field ref = Reference.class.getDeclaredField("referent");
+            ref.setAccessible(true);
+            Object result = ref.get(obj);
+            assertNull(result);  // weakReference always null
+          } catch (Exception e) {
+            e.printStackTrace();
+          }
+        }
+      }
+      System.out.println("exit");
+    }).start();
+
+    assertSame(reference, weakReference.get());
+    reference = null;
     System.gc();
+
     assertNull(weakReference.get()); // 一旦没有指向referent的强引用, weak reference在GC后会被自动回收
+    Thread.sleep(1000);
+    isRun.set(false);
   }
 
 
@@ -57,6 +81,7 @@ public class ReferenceTest {
     assertFalse(weakHashMap.containsValue(value)); // 一旦没有指向 key 的强引用, WeakHashMap 在 GC 后将自动删除相关的 entry
   }
 
+
   /**
    * SoftReference于WeakReference的特性基本一致,最大的区别在于SoftReference会尽可能长的保留引用直到
    * JVM 内存不足时才会被回收(虚拟机保证),这一特性使得SoftReference非常适合缓存应用
@@ -65,13 +90,39 @@ public class ReferenceTest {
    * 对象，并且会在未来重新加载该引用的对象。而WeakReference则当清理内存池时会自动清理掉引用的对象。
    */
   @Test
-  public void testSoftReference() {
-    Object ref = new Object();
-    Reference<Object> weakReference = new SoftReference<>(ref);
-    assertSame(ref, weakReference.get());
-    ref = null;
+  public void testSoftReference() throws Exception {
+    ReferenceQueue<String> referenceQueue = new ReferenceQueue<>();
+    String reference = new String("test");
+    SoftReference<String> softReference = new SoftReference<>(reference, referenceQueue);
+
+    System.out.println("going to collect " + reference.toString() + "with hashcode " + reference.hashCode());
+
+    new Thread(() -> {
+      while(isRun.get()) {
+        Object obj = referenceQueue.poll();
+        if (obj != null) {
+          try {
+            Field ref = Reference.class.getDeclaredField("referent");
+            ref.setAccessible(true);
+            Object result = ref.get(obj);
+            System.out.println("trying to collect " + result.toString() + "with hashcode " + result.hashCode());
+          } catch (Exception e) {
+            e.printStackTrace();
+          }
+        } else {
+          System.out.println("..");
+        }
+      }
+      System.out.println("exit");
+    }).start();
+
+    reference = null;
+    assertNotNull(softReference.get());
     System.gc();
-    assertNotNull(weakReference.get()); //  SoftReference只有在JVM out of memory之前才会被回收
+
+    Thread.sleep(1000);
+    assertNotNull(softReference.get()); //  SoftReference只有在JVM out of memory之前才会被回收
+    isRun.set(false);
   }
 
 
@@ -97,8 +148,6 @@ public class ReferenceTest {
           } catch (Exception e) {
             e.printStackTrace();
           }
-        } else {
-          System.out.println("..");
         }
       }
       System.out.println("exit");
