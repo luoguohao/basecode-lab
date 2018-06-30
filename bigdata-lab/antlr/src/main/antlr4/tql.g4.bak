@@ -1,0 +1,214 @@
+grammar tql;
+
+options {
+  language = Java;
+}
+
+@header {
+package td.olap.engine.query.com.luogh.antlr;
+
+import java.util.*;
+import org.com.luogh.antlr.runtime.BitSet;
+import td.olap.engine.query.bean.ParameterBean;
+import td.olap.engine.query.inter.QueryParam;
+import td.olap.engine.query.bean.QueryEngineResult;
+import td.olap.engine.query.factory.TQLFactory;
+import td.olap.engine.query.utils.QueryResultsCompartor;
+import td.olap.engine.query.calculater.Calculater;
+import td.olap.engine.query.util.EngineUtil;
+}
+
+@lexer::header {
+package td.olap.engine.query.com.luogh.antlr;
+
+import java.util.*;
+import org.com.luogh.antlr.runtime.BitSet;
+import td.olap.engine.query.bean.ParameterBean;
+import td.olap.engine.query.inter.QueryParam;
+import td.olap.engine.query.bean.QueryEngineResult;
+import td.olap.engine.query.factory.TQLFactory;
+import td.olap.engine.query.utils.QueryResultsCompartor;
+import td.olap.engine.query.calculater.Calculater;
+import td.olap.engine.query.util.EngineUtil;
+}
+
+@members {
+  private TQLFactory tql_factory = new TQLFactory();
+  private Calculater calculater = new Calculater();
+  private EngineUtil engineUtil = new EngineUtil();
+  
+  @Override
+  public void emitErrorMessage(String msg) {
+    throw new RuntimeException(engineUtil.parseException(msg));
+  }
+}
+
+rule throws RecognitionException : select;
+
+select returns[QueryEngineResult queryResult] : (value=select_build) {
+  $queryResult=tql_factory.query(null,$value.parameterbean);
+};
+
+select_build returns[ParameterBean parameterbean] : WS* SELECT WS+ ALL WS+ FROM WS+ cube=VALUE{
+  $parameterbean = new ParameterBean();
+  
+  if($cube.text.indexOf(".") > 0){
+    String[] domain_cube = $cube.text.split("\\.");
+    if(domain_cube.length == 2){
+      $parameterbean.setCube(domain_cube[1].trim());
+      $parameterbean.setDomain(domain_cube[0].trim());
+    }else{
+      throw new RuntimeException("The domain and cube in your TQL is illegal,please check.");
+    }
+  }else{
+    $parameterbean.setCube($cube.text);
+  }
+}conditions=where_statement{
+  $parameterbean.setQueryparam($conditions.qp);
+}(WS+ g=groupby{
+  $parameterbean.setGroupby($g.grouplist);
+})?(WS+ order=orderby{
+  $parameterbean.setOrderby($order.orderlist);
+  $parameterbean.setOrder($order.order_num);
+})?(WS+ lim=limit{
+  $parameterbean.setLimit($lim.limits);
+})?;
+
+groupby returns [List<String> grouplist]: GROUPBY WS+ val_group=VALUE{
+  $grouplist = new ArrayList<String>();
+  $grouplist.add($val_group.text);
+} (WS* ',' WS* more_val_group=VALUE {
+  $grouplist.add($more_val_group.text);
+})*;
+
+orderby returns [List<String> orderlist,Integer order_num]: ORDERBY WS+ val_orderby=VALUE{
+  $orderlist = new ArrayList<String>();
+  $orderlist.add($val_orderby.text);
+  $order_num = QueryResultsCompartor.ASC;
+}(WS*',' WS* mor_val_orderby=VALUE{
+  $orderlist.add($mor_val_orderby.text);
+})* ( o=order_ {
+  $order_num = $o.order_g;
+})?;
+
+order_ returns [Integer order_g]: WS+ ASC {
+  $order_g = QueryResultsCompartor.ASC;
+} | WS+ DESC {
+  $order_g = QueryResultsCompartor.DESC;
+};
+
+limit returns [Integer limits]: LIMIT WS+ val_limit=VALUE{
+  $limits = Integer.parseInt($val_limit.text);
+};
+
+where_statement returns[QueryParam qp] : (WS+ WHERE WS+ r=andOrStatement {
+  $qp = $r.queryparam;
+  
+})?;
+
+andOrStatement returns[QueryParam queryparam]: first=where_molecular{
+  $queryparam = new QueryParam();
+  $queryparam.where($first.qp_molecular);
+} (and_or=and_or_operation{
+  Map<String,Object> map_p = $and_or.map;
+  if(map_p.get("andor")!=null && map_p.get("andor").equals("and")){
+    $queryparam.and((QueryParam)map_p.get("qp"));
+  }else if(map_p.get("andor")!=null && map_p.get("andor").equals("or")){
+    $queryparam.or((QueryParam)map_p.get("qp"));
+  }
+})*;
+
+and_or_operation returns [Map<String,Object> map] : WS+ AND WS+ and_p=where_molecular {
+  $map = new HashMap<String,Object>();
+  $map.put("andor","and");
+  $map.put("qp",$and_p.qp_molecular);
+} | WS+ OR WS+ or_p=where_molecular {
+  $map = new HashMap<String,Object>();
+  $map.put("andor","or");
+  $map.put("qp",$or_p.qp_molecular);
+};
+
+where_molecular returns [QueryParam qp_molecular]: val=where_atom {
+  $qp_molecular = new QueryParam();
+  $qp_molecular = $val.queryparam_atom;
+} | OPEN WS* val_=andOrStatement WS* CLOSE {
+  $qp_molecular = new QueryParam();
+  $qp_molecular = $val_.queryparam;
+};
+
+
+where_atom returns [QueryParam queryparam_atom]: val_culumn=VALUE WS* EQ WS* val_eq=expr_atom {
+  $queryparam_atom = new QueryParam();
+  $queryparam_atom.where($val_culumn.text).eq($val_eq.result);
+} | val_culumn=VALUE WS* NE WS* val_ne=expr_atom {
+  $queryparam_atom = new QueryParam();
+  $queryparam_atom.where($val_culumn.text).ne($val_ne.result);
+} | val_culumn=VALUE WS* GE WS* val_ge=expr_atom {
+  $queryparam_atom = new QueryParam();
+  $queryparam_atom.where($val_culumn.text).ge($val_ge.result);
+} | val_culumn=VALUE WS* LE WS* val_le=expr_atom {
+  $queryparam_atom = new QueryParam();
+  $queryparam_atom.where($val_culumn.text).le($val_le.result);
+} | val_culumn=VALUE WS* GT WS* val_gt=expr_atom {
+  $queryparam_atom = new QueryParam();
+  $queryparam_atom.where($val_culumn.text).gt($val_gt.result);
+} | val_culumn=VALUE WS* LT WS* val_lt=expr_atom {
+  $queryparam_atom = new QueryParam();
+  $queryparam_atom.where($val_culumn.text).lt($val_lt.result);
+} | val_culumn=VALUE WS+ IN WS* OPEN WS* val_in=expr_atom{
+  $queryparam_atom = new QueryParam();
+  $queryparam_atom.where($val_culumn.text).eq($val_in.result);
+} WS* (',' WS* val_in_more=expr_atom {
+  $queryparam_atom.or($val_culumn.text).eq($val_in_more.result);
+} WS*)* CLOSE  
+| val_culumn=VALUE WS+ NOTIN WS* OPEN WS* val_notin=expr_atom{
+  $queryparam_atom = new QueryParam();
+  $queryparam_atom.where($val_culumn.text).ne($val_notin.result);
+} WS* (',' WS* val_notin_more=expr_atom{
+  $queryparam_atom.and($val_culumn.text).ne($val_notin_more.result);
+} WS*)* CLOSE
+| val_culumn=VALUE WS+ BETWEEN WS+ val_between1=expr_atom{
+  $queryparam_atom = new QueryParam();
+  $queryparam_atom.where($val_culumn.text).ge($val_between1.result);
+} WS+ AND WS+ val_between2=expr_atom {
+  $queryparam_atom.and($val_culumn.text).le($val_between2.result);
+};
+
+expr_atom returns [String result]: val=VALUE {
+  $result = $val.text;
+} | ADD WS* OPEN WS* base=VALUE WS* ',' WS* add=VALUE WS* CLOSE {
+  $result = calculater.add($base.text,Integer.parseInt($add.text));
+} | '\'' val_str=VALUE '\''{
+  $result = engineUtil.rollbackspecial($val_str.text);
+} | '\"' val_str_double=VALUE '\"'{
+  $result = engineUtil.rollbackspecial($val_str_double.text);
+};
+
+WS : (' '  | '\t' | '\n' | '\r' )+;
+SELECT : 'select'|'SELECT';
+ALL : '*';
+AND : 'AND'|'and';
+OR : 'OR'|'or';
+FROM : 'from' | 'FROM';
+WHERE : 'where' | 'WHERE';
+NOT : 'NOT' | 'not';
+IN : 'IN'|'in';
+NOTIN : 'NOT'WS+'IN' | 'not'WS+'in';
+BETWEEN : 'BETWEEN'|'between';
+NE : '!='|'<>';
+GE : '>=';
+LE : '<=';
+GT : '>';
+LT : '<';
+EQ : '=';
+OPEN : '(';
+CLOSE : ')';
+GROUPBY : 'group'WS+'by'|'GROUP'WS+'BY';
+ORDERBY : 'order'WS+'by'|'ORDER'WS+'BY';
+ASC : 'ASC' | 'asc';
+DESC : 'DESC' | 'desc';
+LIMIT : 'LIMIT' | 'limit';
+ADD : 'add' | 'ADD';
+
+VALUE : (~(' '|'\t'|'\n'|'\r'|';'|'='|'!'|'<'|'>'|','|OPEN|CLOSE|'\''|'\"'))+;
+

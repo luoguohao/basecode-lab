@@ -1,0 +1,27 @@
+package com.luogh.antlr;
+
+import org.apache.commons.lang3.StringUtils;
+
+public class ArrayInitConvertListener extends com.luogh.antlr.ArrayInitBaseListener {
+
+  @Override
+  public void enterInit(com.luogh.antlr.ArrayInitParser.InitContext ctx) {
+    System.out.print('"');
+  }
+
+  @Override
+  public void exitInit(com.luogh.antlr.ArrayInitParser.InitContext ctx) {
+    System.out.print('"');
+  }
+
+  @Override
+  public void enterValue(com.luogh.antlr.ArrayInitParser.ValueContext ctx) {
+    if (ctx.INT() != null) {
+      String text = ctx.INT().getText();
+      if (StringUtils.isNotEmpty(text)) {
+        int value = Integer.valueOf(text);
+        System.out.printf("\\u%04x", value);
+      }
+    }
+  }
+}
