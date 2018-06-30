@@ -17,6 +17,7 @@
         <module>finagle</module>
       <module>hbase</module>
       <module>spark</module>
+      <module>antlr</module>
     </modules>
 
 </project>
