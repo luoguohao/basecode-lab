@@ -2,6 +2,9 @@ package com.luogh.antlr;
 
 import com.luogh.antlr.ArrayInitParser.InitContext;
 import com.luogh.antlr.ExprParser.ProgContext;
+import com.luogh.antlr.ExprProLexer;
+import java.io.FileInputStream;
+import java.io.InputStream;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -42,5 +45,15 @@ public class AntlrRunner {
     ParseTreeWalker walker = new ParseTreeWalker();
     walker.walk(new ArrayInitConvertListener(), context);
     System.out.println();
+  }
+
+  @Test
+  public void testExprPro() throws Exception {
+    CharStream charStream = CharStreams.fromStream(ClassLoader.getSystemResourceAsStream("exprPro.testdata"));
+    ExprProLexer lexer = new ExprProLexer(charStream);
+    CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
+    com.luogh.antlr.ExprProParser parser = new com.luogh.antlr.ExprProParser(commonTokenStream);
+    ParseTree tree = parser.prog ();
+    System.out.println(tree.toStringTree(parser));
   }
 }
