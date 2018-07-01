@@ -1,10 +1,6 @@
 package com.luogh.antlr;
 
-import com.luogh.antlr.ArrayInitParser.InitContext;
-import com.luogh.antlr.ExprParser.ProgContext;
-import com.luogh.antlr.ExprProLexer;
-import java.io.FileInputStream;
-import java.io.InputStream;
+
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -50,7 +46,7 @@ public class AntlrRunner {
   @Test
   public void testExprPro() throws Exception {
     CharStream charStream = CharStreams.fromStream(ClassLoader.getSystemResourceAsStream("exprPro.testdata"));
-    ExprProLexer lexer = new ExprProLexer(charStream);
+    com.luogh.antlr.ExprProLexer lexer = new com.luogh.antlr.ExprProLexer(charStream);
     CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
     com.luogh.antlr.ExprProParser parser = new com.luogh.antlr.ExprProParser(commonTokenStream);
     ParseTree tree = parser.prog ();
