@@ -40,7 +40,6 @@ public class AntlrRunner {
 
     ParseTreeWalker walker = new ParseTreeWalker();
     walker.walk(new ArrayInitConvertListener(), context);
-    System.out.println();
   }
 
   @Test
@@ -62,5 +61,16 @@ public class AntlrRunner {
     ParseTree tree = parser.prog();
     LabeledExprCalculatorVisitor visitor = new LabeledExprCalculatorVisitor();
     visitor.visit(tree);
+  }
+
+  @Test
+  public void testJava8Expr() throws Exception {
+    CharStream charStream = CharStreams.fromStream(ClassLoader.getSystemResourceAsStream("java8.testdata"));
+    com.luogh.antlr.Java8Lexer lexer = new com.luogh.antlr.Java8Lexer(charStream);
+    CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
+    com.luogh.antlr.Java8Parser parser = new com.luogh.antlr.Java8Parser(commonTokenStream);
+    ParseTree tree = parser.compilationUnit();
+    ParseTreeWalker walker = new ParseTreeWalker();
+    walker.walk(new JavaSyntaxInterfaceExtractorListener(parser), tree);
   }
 }
