@@ -1,5 +1,7 @@
 grammar ExprPro;
 
+import CommonLexer;
+
 options {
   language = Java;
 }
@@ -20,10 +22,4 @@ package com.luogh.antlr;
 
 prog: stat+ ;     // parse rule
 stat: expr NEWLINE | ID '=' expr NEWLINE | NEWLINE; // parse rule
-expr: atom | expr ('+'|'-'|'*'|'/') expr | '(' expr  ')' ; // parse rule
-atom: INT|ID; // parse rule
-
-NEWLINE : '\r'? '\n';     // lexical(token) rule
-INT : [0-9]+;             // lexical(token) rule
-ID : [a-z]+ ;             // lexical(token) rule
-WS: [ \t\r\n]+ -> skip ; // lexical(token) rule
+expr: INT| ID | expr ('+'|'-'|'*'|'/') expr | '(' expr  ')' ; // parse rule

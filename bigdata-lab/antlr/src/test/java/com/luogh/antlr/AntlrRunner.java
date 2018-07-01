@@ -49,7 +49,18 @@ public class AntlrRunner {
     com.luogh.antlr.ExprProLexer lexer = new com.luogh.antlr.ExprProLexer(charStream);
     CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
     com.luogh.antlr.ExprProParser parser = new com.luogh.antlr.ExprProParser(commonTokenStream);
-    ParseTree tree = parser.prog ();
+    ParseTree tree = parser.prog();
     System.out.println(tree.toStringTree(parser));
+  }
+
+  @Test
+  public void testLabeledExpr() throws Exception {
+    CharStream charStream = CharStreams.fromStream(ClassLoader.getSystemResourceAsStream("exprPro.testdata"));
+    com.luogh.antlr.LabeledExprLexer lexer = new com.luogh.antlr.LabeledExprLexer(charStream);
+    CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
+    com.luogh.antlr.LabeledExprParser parser = new com.luogh.antlr.LabeledExprParser(commonTokenStream);
+    ParseTree tree = parser.prog();
+    LabeledExprCalculatorVisitor visitor = new LabeledExprCalculatorVisitor();
+    visitor.visit(tree);
   }
 }
