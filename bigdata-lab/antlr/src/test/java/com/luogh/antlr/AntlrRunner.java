@@ -73,4 +73,15 @@ public class AntlrRunner {
     ParseTreeWalker walker = new ParseTreeWalker();
     walker.walk(new JavaSyntaxInterfaceExtractorListener(parser), tree);
   }
+
+  @Test
+  public void testEmbeddingArbitraryCode() throws Exception {
+    int col = 1;
+    CharStream charStream = CharStreams.fromStream(ClassLoader.getSystemResourceAsStream("rows.testdata"));
+    com.luogh.antlr.RowsLexer lexer = new com.luogh.antlr.RowsLexer(charStream);
+    CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
+    com.luogh.antlr.RowsParser parser = new com.luogh.antlr.RowsParser(commonTokenStream, col); // parse column number
+    parser.setBuildParseTree(false); // don't waste time building a tree
+    parser.file();
+  }
 }

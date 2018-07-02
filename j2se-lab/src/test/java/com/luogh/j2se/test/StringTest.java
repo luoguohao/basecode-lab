@@ -50,4 +50,17 @@ public class StringTest {
     String d = "testtest2";
     Assert.assertSame(d, c.intern());
   }
+
+
+  @Test
+  public void testString() {
+    String lastKey = null;
+    String redisKey = "asdf";
+
+    if (lastKey == null) {
+      lastKey = redisKey;
+    } else if (!lastKey.equals(redisKey)) {
+      System.out.println("test");
+    }
+  }
 }
