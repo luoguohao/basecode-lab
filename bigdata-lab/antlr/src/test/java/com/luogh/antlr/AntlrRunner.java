@@ -84,4 +84,24 @@ public class AntlrRunner {
     parser.setBuildParseTree(false); // don't waste time building a tree
     parser.file();
   }
+
+  /**
+   * 语义谓词，即语法树的解析依赖谓词判断
+   * 本例中通过对一组数据：1 10 2 20 20 3 1 2 3
+   * 按照每一次解析的数据个数，将数据进行分组：
+   * 即：1表示将取10一个数据分组
+   *    2表示将取2个数：20 20 作为同一组
+   *    3表示取3个数：1 2 3 作为同一组
+   * 结果如下
+   * (file (group 1 (sequence 10)) (group 2 (sequence 20 20)) (group 3 (sequence 1 2 3)))
+   * @throws Exception
+   */
+  @Test
+  public void testSemanticPredicate() throws Exception {
+    CharStream charStream = CharStreams.fromStream(ClassLoader.getSystemResourceAsStream("data.testdata"));
+    com.luogh.antlr.DataLexer lexer = new com.luogh.antlr.DataLexer(charStream);
+    CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
+    com.luogh.antlr.DataParser parser = new com.luogh.antlr.DataParser(commonTokenStream);
+    System.out.println(parser.file().toStringTree(parser));
+  }
 }
