@@ -1,5 +1,8 @@
 package com.luogh.j2se.test;
 
+import com.alibaba.fastjson.JSONObject;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -62,5 +65,20 @@ public class StringTest {
     } else if (!lastKey.equals(redisKey)) {
       System.out.println("test");
     }
+  }
+
+
+  @Test
+  public void testJson() {
+    List<String> list = new ArrayList<>();
+    list.add("tset");
+    list.add("tset");
+    list.add("tset");
+
+    JSONObject jsonObj = new JSONObject();
+    jsonObj.put("v", "1.0");
+    jsonObj.put("datatype", "te");
+    jsonObj.put("data", list);
+    System.out.println(jsonObj.toJSONString());
   }
 }

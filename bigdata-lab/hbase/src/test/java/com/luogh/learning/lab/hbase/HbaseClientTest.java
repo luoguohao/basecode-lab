@@ -13,13 +13,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import javax.sql.PooledConnection;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.Charsets;
 import org.apache.hadoop.conf.Configuration;
@@ -32,12 +30,10 @@ import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.BufferedMutatorParams;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
@@ -115,7 +111,7 @@ public class HbaseClientTest {
   @Test
   public void testRowkeyQuery() throws Exception {
     try (Connection conn = ConnectionFactory.createConnection(configuration, executorService)) {
-      Stopwatch stopwatch = new Stopwatch();
+      Stopwatch stopwatch = Stopwatch.createStarted();
       try (Table table = conn.getTable(TableName.valueOf("tag_bitmap"))) {
         String rowKey = Utils
             .formatRowkey("bestselleryszh930_m_attribute_ONLY/ALL/3_METAACCOUNT20171205001");
@@ -137,7 +133,7 @@ public class HbaseClientTest {
               .append("【value size】:").append(Utils.formatBytes(CellUtil.cloneValue(cell).length))
               .append("\n\n");
         }
-        System.out.println("query total cost " + stopwatch.elapsedTime(TimeUnit.SECONDS) + " s");
+        System.out.println("query total cost " + stopwatch.elapsed(TimeUnit.SECONDS) + " s");
         System.out.println(resultStr.toString());
       }
     }
@@ -146,7 +142,7 @@ public class HbaseClientTest {
 
   @Test
   public void testRowPrefixPatternQuery() throws Exception {
-    Stopwatch stopwatch = new Stopwatch();
+    Stopwatch stopwatch = Stopwatch.createStarted();
     try (PrintWriter writer = new PrintWriter("rowkey_prefix_bitmap_size.csv",
         Charsets.UTF_8.displayName())) {
       try (Connection conn = ConnectionFactory.createConnection(configuration, executorService)) {
@@ -179,14 +175,14 @@ public class HbaseClientTest {
           }
         }
       }
-      System.out.println("query total cost " + stopwatch.elapsedTime(TimeUnit.SECONDS) + " s");
+      System.out.println("query total cost " + stopwatch.elapsed(TimeUnit.SECONDS) + " s");
       writer.flush();
     }
   }
 
   @Test
   public void testRowRegexPatternQuery() throws Exception {
-    Stopwatch stopwatch = new Stopwatch().start();
+    Stopwatch stopwatch = Stopwatch.createStarted();
     try (PrintWriter writer = new PrintWriter("rowkey_bitmap_size.csv",
         Charsets.UTF_8.displayName())) {
       try (Connection conn = ConnectionFactory.createConnection(configuration, executorService)) {
@@ -220,7 +216,7 @@ public class HbaseClientTest {
         }
       }
       System.out
-          .println("query total cost " + stopwatch.stop().elapsedTime(TimeUnit.SECONDS) + " s");
+          .println("query total cost " + stopwatch.stop().elapsed(TimeUnit.SECONDS) + " s");
       writer.flush();
     }
   }
@@ -228,7 +224,7 @@ public class HbaseClientTest {
 
   @Test
   public void testPut() {
-    Stopwatch stopwatch = new Stopwatch().start();
+    Stopwatch stopwatch = Stopwatch.createStarted();
     Random rand = new Random();
 
     try (Connection conn = ConnectionFactory.createConnection(configuration, executorService)) {
@@ -284,13 +280,13 @@ public class HbaseClientTest {
       log.info("exception while creating/destroying Connection or BufferedMutator", e);
     } // BufferedMutator.close() ensures all work is flushed. Could be the custom listener is
     // invoked from here.
-    System.out.println("query total cost " + stopwatch.stop().elapsedTime(TimeUnit.SECONDS) + " s");
+    System.out.println("query total cost " + stopwatch.stop().elapsed(TimeUnit.SECONDS) + " s");
   }
 
 
   @Test
   public void testBatchQuery() {
-    Stopwatch stopwatch = new Stopwatch().start();
+    Stopwatch stopwatch = Stopwatch.createStarted();
     Random rand = new Random();
     int matchCount = 0;
     try (
@@ -322,7 +318,7 @@ public class HbaseClientTest {
       e.printStackTrace();
     }
     System.out.println(
-        "query total cost " + stopwatch.stop().elapsedTime(TimeUnit.SECONDS) + " s, match count:"
+        "query total cost " + stopwatch.stop().elapsed(TimeUnit.SECONDS) + " s, match count:"
             + matchCount);
   }
 
@@ -339,7 +335,7 @@ public class HbaseClientTest {
       Scan scan = new Scan();
 //      scan.setConsistency(Consistency.TIMELINE);
       scan.setStartRow(Bytes.toBytes("33333333333333333333333333322220"));
-      scan.setStopRow( Bytes.toBytes("3333333333333333333333333333333F"));
+      scan.setStopRow(Bytes.toBytes("3333333333333333333333333333333F"));
       scan.setMaxResultSize(100);
       scan.setCaching(1000);
       scan.setBatch(10000);
@@ -353,7 +349,7 @@ public class HbaseClientTest {
         Get get = new Get(result.getRow());
         get.setCacheBlocks(true);
         gets.add(get);
-        if ( resultCnt % 1000 == 0) {
+        if (resultCnt % 1000 == 0) {
           System.out.println("bucket with count : " + resultCnt);
         }
       }
@@ -362,7 +358,7 @@ public class HbaseClientTest {
 
       int tryTime = 10;
       for (int i = 0; i < tryTime; i++) {
-        Stopwatch stopwatch = new Stopwatch().start();
+        Stopwatch stopwatch = Stopwatch.createStarted();
         Cell cell;
         CellScanner cellScanner;
         for (Result re : table.get(gets)) {
@@ -372,7 +368,7 @@ public class HbaseClientTest {
             cell = cellScanner.current();
           }
         }
-        System.out.println("query total cost " + stopwatch.stop().elapsedTime(TimeUnit.SECONDS)
+        System.out.println("query total cost " + stopwatch.stop().elapsed(TimeUnit.SECONDS)
             + " s, match count:" + matchCount);
         Thread.sleep(TimeUnit.SECONDS.toMillis(4));
       }
@@ -384,7 +380,7 @@ public class HbaseClientTest {
 
   @Test
   public void testMultiQuery() {
-    Stopwatch stopwatch = new Stopwatch().start();
+    Stopwatch stopwatch = Stopwatch.createStarted();
     Random rand = new Random();
     int matchCount = 0;
     try (
@@ -413,7 +409,7 @@ public class HbaseClientTest {
       e.printStackTrace();
     }
     System.out.println(
-        "query total cost " + stopwatch.stop().elapsedTime(TimeUnit.SECONDS) + " s, match count:"
+        "query total cost " + stopwatch.stop().elapsed(TimeUnit.SECONDS) + " s, match count:"
             + matchCount);
   } // 结果很慢
 }

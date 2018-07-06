@@ -11,7 +11,12 @@ import static com.luogh.learning.lab.hbase.constant.HbaseConstants.WRITE_COLUMN_
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.luogh.learning.lab.hbase.util.MD5Utils;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.math.BigInteger;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -30,10 +35,14 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.LoadBalancerProtos;
+import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.zookeeper.KeeperException;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -167,6 +176,127 @@ public class HbaseAdminTest {
   }
 
 
+  @Test
+  public void testReadMetaRegionZkNode() throws Exception {
+    Abortable abortable = new Abortable() {
+      @Override
+      public void abort(String why, Throwable e) {
+        throw new RuntimeException(why, e);
+      }
+
+      @Override
+      public boolean isAborted() {
+        return false;
+      }
+    };
+    ZooKeeperWatcher zooKeeper = new ZooKeeperWatcher(HBaseConfiguration.create(), "zk-node-reader", abortable, false);
+//    byte[] data = ZKUtil.getData(zooKeeper, "/hbase/master");
+    byte[] data = ZKUtil.getData(zooKeeper, "/hbase/rs/sz-pg-smce-devhadoop-009.tendcloud.com,16020,1530707987453");
+    System.out.println(ServerName.parseFrom(data).toString());
+  }
+
+
+  @Test
+  public void testListZkNodeWithWatcher() throws Exception {
+    Abortable abortable = new Abortable() {
+      @Override
+      public void abort(String why, Throwable e) {
+        throw new RuntimeException(why, e);
+      }
+
+      @Override
+      public boolean isAborted() {
+        return false;
+      }
+    };
+    ZooKeeperWatcher zooKeeper = new ZooKeeperWatcher(HBaseConfiguration.create(), "zk-node-reader", abortable, false);
+    zooKeeper.registerListenerFirst(new ZooKeeperListener(zooKeeper) {
+      @Override
+      public void nodeCreated(String path) {
+        try{
+          log.info("nodeCreated path:{}", path);
+          ServerName sn = ServerName.parseServerName(ZKUtil.getNodeName(path));
+          log.info("nodeCreated servername:{}", sn);
+        } catch (Exception e) {
+          log.error("with error:{}", e);
+        }
+      }
+
+      @Override
+      public void nodeDeleted(String path) {
+        try {
+          log.info("nodeDeleted path:{}", path);
+          ServerName sn = ServerName.parseServerName(ZKUtil.getNodeName(path));
+          log.info("nodeDeleted servername:{}", sn);
+        } catch (Exception e) {
+          log.error("with error:{}", e);
+        }
+      }
+
+      @Override
+      public void nodeDataChanged(String path) {
+        try{
+          log.info("nodeDataChanged path:{}", path);
+          ServerName sn = ServerName.parseServerName(ZKUtil.getNodeName(path));
+          log.info("nodeDataChanged servername:{}", sn);
+        } catch (Exception e) {
+          log.error("with error:{}", e);
+        }
+      }
+
+      @Override
+      public void nodeChildrenChanged(String path) {
+       log.info("node childrenChanged:{}", path);
+        try {
+          ZKUtil.listChildrenAndWatchThem(zooKeeper, path);
+        } catch (KeeperException e) {
+          e.printStackTrace();
+        }
+      }
+    });
+    ZKUtil.listChildrenAndWatchThem(zooKeeper, "/hbase/rs");
+    Thread.currentThread().join();
+  }
+
+  @Test
+  public void testListZkNode() throws Exception {
+    Abortable abortable = new Abortable() {
+      @Override
+      public void abort(String why, Throwable e) {
+        throw new RuntimeException(why, e);
+      }
+
+      @Override
+      public boolean isAborted() {
+        return false;
+      }
+    };
+    ZooKeeperWatcher zooKeeper = new ZooKeeperWatcher(HBaseConfiguration.create(), "zk-node-reader", abortable, false);
+    List<String> servers = ZKUtil.listChildrenNoWatch(zooKeeper, "/hbase/rs");
+    for (String n: servers) {
+      ServerName sn = ServerName.parseServerName(ZKUtil.getNodeName(n));
+      log.info("servername:{}", sn);
+      RegionServerInfo.Builder rsInfoBuilder = RegionServerInfo.newBuilder();
+      try {
+        String nodePath = ZKUtil.joinZNode("/hbase/rs", n);
+        byte[] data = ZKUtil.getData(zooKeeper, nodePath);
+        if (data != null && data.length > 0 && ProtobufUtil.isPBMagicPrefix(data)) {
+          int magicLen = ProtobufUtil.lengthOfPBMagic();
+          ProtobufUtil.mergeFrom(rsInfoBuilder, data, magicLen, data.length - magicLen);
+        }
+        log.debug("Added tracking of RS " + nodePath);
+      } catch (KeeperException e) {
+        log.warn("Get Rs info port from ephemeral node", e);
+      } catch (IOException e) {
+        log.warn("Illegal data from ephemeral node", e);
+      } catch (InterruptedException e) {
+        throw new InterruptedIOException();
+      }
+      log.info("resinfo:{}", rsInfoBuilder.build());
+    }
+  }
+
+
   private LoadBalancerProtos.LoadBalancerState parseFrom(byte [] pbBytes)
       throws DeserializationException {
     ProtobufUtil.expectPBMagicPrefix(pbBytes);
@@ -179,5 +309,16 @@ public class HbaseAdminTest {
       throw new DeserializationException(e);
     }
     return builder.build();
+  }
+
+
+  @Test
+  public void testDNS() throws Exception {
+    String[] hosts = org.apache.hadoop.net.DNS.getIPs("en0");
+    System.out.println("--> " + Arrays.toString(hosts));
+
+    String host = DNS.getDefaultHost("en0", "172.20.0.1");
+    InetSocketAddress initialIsa = new InetSocketAddress(host, 1012);
+    System.out.println(initialIsa.getHostName());
   }
 }
