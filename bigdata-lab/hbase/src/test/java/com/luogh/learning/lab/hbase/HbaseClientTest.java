@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.BufferedMutatorParams;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -111,7 +112,7 @@ public class HbaseClientTest {
   @Test
   public void testRowkeyQuery() throws Exception {
     try (Connection conn = ConnectionFactory.createConnection(configuration, executorService)) {
-      Stopwatch stopwatch = Stopwatch.createStarted();
+      Stopwatch stopwatch = new Stopwatch().start();
       try (Table table = conn.getTable(TableName.valueOf("tag_bitmap"))) {
         String rowKey = Utils
             .formatRowkey("bestselleryszh930_m_attribute_ONLY/ALL/3_METAACCOUNT20171205001");
@@ -133,7 +134,7 @@ public class HbaseClientTest {
               .append("【value size】:").append(Utils.formatBytes(CellUtil.cloneValue(cell).length))
               .append("\n\n");
         }
-        System.out.println("query total cost " + stopwatch.elapsed(TimeUnit.SECONDS) + " s");
+        System.out.println("query total cost " + stopwatch.elapsedTime(TimeUnit.SECONDS) + " s");
         System.out.println(resultStr.toString());
       }
     }
@@ -142,7 +143,7 @@ public class HbaseClientTest {
 
   @Test
   public void testRowPrefixPatternQuery() throws Exception {
-    Stopwatch stopwatch = Stopwatch.createStarted();
+    Stopwatch stopwatch = new Stopwatch().start();
     try (PrintWriter writer = new PrintWriter("rowkey_prefix_bitmap_size.csv",
         Charsets.UTF_8.displayName())) {
       try (Connection conn = ConnectionFactory.createConnection(configuration, executorService)) {
@@ -175,14 +176,14 @@ public class HbaseClientTest {
           }
         }
       }
-      System.out.println("query total cost " + stopwatch.elapsed(TimeUnit.SECONDS) + " s");
+      System.out.println("query total cost " + stopwatch.elapsedTime(TimeUnit.SECONDS) + " s");
       writer.flush();
     }
   }
 
   @Test
   public void testRowRegexPatternQuery() throws Exception {
-    Stopwatch stopwatch = Stopwatch.createStarted();
+    Stopwatch stopwatch = new Stopwatch().start();
     try (PrintWriter writer = new PrintWriter("rowkey_bitmap_size.csv",
         Charsets.UTF_8.displayName())) {
       try (Connection conn = ConnectionFactory.createConnection(configuration, executorService)) {
@@ -216,7 +217,7 @@ public class HbaseClientTest {
         }
       }
       System.out
-          .println("query total cost " + stopwatch.stop().elapsed(TimeUnit.SECONDS) + " s");
+          .println("query total cost " + stopwatch.stop().elapsedTime(TimeUnit.SECONDS) + " s");
       writer.flush();
     }
   }
@@ -224,7 +225,7 @@ public class HbaseClientTest {
 
   @Test
   public void testPut() {
-    Stopwatch stopwatch = Stopwatch.createStarted();
+    Stopwatch stopwatch = new Stopwatch().start();
     Random rand = new Random();
 
     try (Connection conn = ConnectionFactory.createConnection(configuration, executorService)) {
@@ -280,13 +281,13 @@ public class HbaseClientTest {
       log.info("exception while creating/destroying Connection or BufferedMutator", e);
     } // BufferedMutator.close() ensures all work is flushed. Could be the custom listener is
     // invoked from here.
-    System.out.println("query total cost " + stopwatch.stop().elapsed(TimeUnit.SECONDS) + " s");
+    System.out.println("query total cost " + stopwatch.stop().elapsedTime(TimeUnit.SECONDS) + " s");
   }
 
 
   @Test
   public void testBatchQuery() {
-    Stopwatch stopwatch = Stopwatch.createStarted();
+    Stopwatch stopwatch = new Stopwatch().start();
     Random rand = new Random();
     int matchCount = 0;
     try (
@@ -318,7 +319,7 @@ public class HbaseClientTest {
       e.printStackTrace();
     }
     System.out.println(
-        "query total cost " + stopwatch.stop().elapsed(TimeUnit.SECONDS) + " s, match count:"
+        "query total cost " + stopwatch.stop().elapsedTime(TimeUnit.SECONDS) + " s, match count:"
             + matchCount);
   }
 
@@ -358,7 +359,7 @@ public class HbaseClientTest {
 
       int tryTime = 10;
       for (int i = 0; i < tryTime; i++) {
-        Stopwatch stopwatch = Stopwatch.createStarted();
+        Stopwatch stopwatch = new Stopwatch().start();
         Cell cell;
         CellScanner cellScanner;
         for (Result re : table.get(gets)) {
@@ -368,7 +369,7 @@ public class HbaseClientTest {
             cell = cellScanner.current();
           }
         }
-        System.out.println("query total cost " + stopwatch.stop().elapsed(TimeUnit.SECONDS)
+        System.out.println("query total cost " + stopwatch.stop().elapsedTime(TimeUnit.SECONDS)
             + " s, match count:" + matchCount);
         Thread.sleep(TimeUnit.SECONDS.toMillis(4));
       }
@@ -379,8 +380,44 @@ public class HbaseClientTest {
 
 
   @Test
+  public void testDelete() throws Exception {
+    try (
+        Connection conn = ConnectionFactory.createConnection(configuration, executorService);
+        Table table = conn.getTable(TableName.valueOf("hbase",
+            "meta"))
+    ) {
+      FilterList filterList = new FilterList();
+      Filter rowkeyFilter = new RowFilter(CompareOp.EQUAL,
+          new RegexStringComparator("t1"));
+      filterList.addFilter(rowkeyFilter);
+      Filter keyOnly = new KeyOnlyFilter();
+      filterList.addFilter(keyOnly);
+      Scan scan = new Scan();
+      scan.setFilter(filterList);
+      List<Delete> deletes = Lists.newArrayList();
+      try (ResultScanner resultScanner = table.getScanner(scan)) {
+        for (Result result : resultScanner) {
+          System.out.println("row => " + Bytes.toString(result.getRow()));
+          StringBuilder resultStr;
+          CellScanner cellScanner = result.cellScanner();
+          Cell cell;
+          while (cellScanner.advance()) {
+            cell = cellScanner.current();
+            resultStr = new StringBuilder();
+            resultStr.append("qualifier => ").append(Bytes.toString(CellUtil.cloneQualifier(cell))).append(" cell => ")
+                .append(Bytes.toString(CellUtil.cloneValue(cell)));
+//            System.out.println(resultStr.toString());
+          }
+          deletes.add(new Delete(result.getRow()));
+        }
+      }
+      table.delete(deletes);
+    }
+  }
+
+  @Test
   public void testMultiQuery() {
-    Stopwatch stopwatch = Stopwatch.createStarted();
+    Stopwatch stopwatch = new Stopwatch().start();
     Random rand = new Random();
     int matchCount = 0;
     try (
@@ -409,7 +446,7 @@ public class HbaseClientTest {
       e.printStackTrace();
     }
     System.out.println(
-        "query total cost " + stopwatch.stop().elapsed(TimeUnit.SECONDS) + " s, match count:"
+        "query total cost " + stopwatch.stop().elapsedTime(TimeUnit.SECONDS) + " s, match count:"
             + matchCount);
   } // 结果很慢
 }
