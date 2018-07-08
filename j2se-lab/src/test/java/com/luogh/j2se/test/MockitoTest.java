@@ -1,10 +1,13 @@
 package com.luogh.j2se.test;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.atMost;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -15,26 +18,48 @@ import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.Lists;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
+import org.mockito.Captor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.Spy;
+import org.mockito.invocation.InvocationOnMock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 import org.mockito.quality.Strictness;
+import org.mockito.stubbing.Answer;
 
 public class MockitoTest {
 
   @Mock
   private Person person;
+
+  /** 参数捕获 **/
+  @Captor
+  private ArgumentCaptor<Person> argumentCaptor;
+
+  /** Instance for spying is created by calling constructor explicitly **/
+  @Spy
+  private List spy = new ArrayList(10);
+
+  /**
+   * Instance for spying is created by mockito via reflection (only default
+   * constructors supported)
+   **/
+  @Spy
+  private List spy2;
 
   @Rule
   public ExpectedException thrown = ExpectedException.none();
@@ -74,8 +99,8 @@ public class MockitoTest {
     when(mockedList.get(0)).thenReturn("first");
     when(mockedList.get(1)).thenThrow(new RuntimeException());
 
-    Assert.assertEquals("first", mockedList.get(0));
-    Assert.assertEquals("first", mockedList.get(0));
+    assertEquals("first", mockedList.get(0));
+    assertEquals("first", mockedList.get(0));
     thrown.expect(RuntimeException.class);
     // thrown.expectMessage("expect exception with error containing the following message");
     mockedList.get(1);  // will throw RuntimeException
@@ -111,7 +136,7 @@ public class MockitoTest {
     thrown.expectMessage("Invalid use of argument matchers!");
     when(mockedList.addAll(anyInt(), Lists.newArrayList())).thenReturn(true);
 
-    Assert.assertEquals("element", mockedList.get(999));
+    assertEquals("element", mockedList.get(999));
     Assert.assertTrue(mockedList.addAll(1, mockedList));
     Assert.assertTrue(mockedList.contains("tst"));
 
@@ -233,6 +258,7 @@ public class MockitoTest {
     verifyNoMoreInteractions(list);
   }
 
+
   /**
    * 使用注解方式简化mock对象的创建 注意： 方法一：在运行测试类之前，调用：MockitoAnnotations.initMocks(testClass); 或者使用内置runner:
    * 方法二：使用MockitoJUnitRunner 方法三: 使用rule : MockitoRule
@@ -245,12 +271,166 @@ public class MockitoTest {
   }
 
 
+  /**
+   * 为连续的调用做测试桩(stub)
+   * 有时候需要为同一个函数调用的不同的返回值或异常做测试桩
+   * @return
+   */
+  @Test
+  public void testConsecutiveStub() {
+    List list = mock(List.class);
+    when(list.add(1)).thenThrow(new RuntimeException())
+        .thenReturn(true);
+
+    // First call: throw new RuntimeException
+    thrown.expect(RuntimeException.class);
+    list.add(1);
+    // Second call: equals true
+    Assert.assertTrue(list.add(1));
+    // any consecutive call: prints "foo" as well(last stubbing wins)
+    Assert.assertTrue(list.add(1));
+
+    // more simple usage
+    // first call return 1 , second call return 2 ,third call return 3 ...
+    when(list.get(0)).thenReturn(1, 2, 3);
+    assertEquals(1, list.get(0));
+    assertEquals(2, list.get(0));
+    assertEquals(3, list.get(0));
+  }
+
+
+  /**
+   * 为回调做测试桩
+   * @return
+   */
+  @Test
+  public void testCallback() {
+    List list = mock(List.class);
+    when(list.get(0)).then((Answer<String>) invocation -> {
+      Object[] args = invocation.getArguments();
+      return "called with arguments:" + args[0];
+    });
+    assertEquals("called with arguments:0", list.get(0));
+  }
+
+
+  /**
+   * doReturn() doThrow() doAnswer() doNothing() doCallRealMethod()方法的运用
+   *
+   * 通过when(Object)为无返回值的函数打桩有不同的方法,因为编译器不喜欢void函数在括号内…
+   * 使用doThrow(Throwable) 替换stubVoid(Object)来为void函数打桩是为了与doAnswer()
+   * 等函数族保持一致性。
+   *
+   * 用于测试void函数
+   * @return
+   */
+  @Test
+  public void testDoMethod() {
+    List list = mock(List.class);
+    thrown.expect(RuntimeException.class);
+
+    doReturn(false).when(list).add(1);
+    doThrow(new RuntimeException()).when(list).add(0);
+
+    assertEquals(false, list.add(1));
+    list.add(0);
+  }
+
+
+  /**
+   * 监控真实对象
+   * 你可以为真实对象创建一个监控(spy)对象。当你使用这个spy对象时真实的对象也会也调用，
+   * 除非它的函数被stub了。尽量少使用spy对象，使用时也需要小心形式，例如spy对象可以用
+   * 来处理遗留代码。
+   * Mockito并不会为真实对象代理函数调用，实际上他会拷贝真实对象。因此
+   * 如果你保留了真实对象，并且与之交互，不要期望从监控对象上得到正确的结果，
+   * 如果你在监控对象上调用一个没有被stub的函数，时并不会调用真实对象对应的函数
+   * 你不会在真实对象上看到任何效果
+   * @return
+   */
+  @Test
+  public void testSpy() {
+    List<String> list = new ArrayList<>();
+    list.add("add");
+    List<String> spy = Mockito.spy(list);
+
+    assertEquals("add", spy.get(0)); // spy is copy the real object
+
+    // Impossible: real method is called so spy.get(0) throws IndexOutOfBoundsException
+    thrown.expect(IndexOutOfBoundsException.class);
+    when(spy.get(1)).thenReturn("test");
+    // use doReturn() for stubbing instead.
+    doReturn("test").when(spy).get(1);
+    assertEquals("test", spy.get(1));
+
+    // optionally, you can stub out some methods
+    when(spy.size()).thenReturn(100);
+
+    // using the spy calls *real* methods
+    spy.add("one");
+    spy.add("two");
+
+    assertEquals("add", spy.get(0));
+    assertEquals("one", spy.get(1));
+
+    // size() method was stubbed
+    assertEquals("add", list.get(0));
+
+    // optionally, you can verify
+    verify(spy).add("one");
+    verify(spy).add("two");
+
+    assertEquals(1,list.size());
+  }
+
+
+  @Test
+  public void testSpyAnnotation() {
+    when(spy.size()).thenReturn(10);
+    assertEquals(10, spy.size());
+
+    when(spy2.size()).thenReturn(10);
+    assertEquals(10, spy2.size());
+  }
+
+  /**
+   * 修改没有测试桩的调用的默认返回值
+   * @return
+   */
+  @Test
+  public void testDefaultReturnValue() {
+    List list = mock(List.class, Mockito.RETURNS_SMART_NULLS);
+    // calling unstubbing method
+    // list.get(0) doesn't yield NullPointerException this time!
+    // Instead, SmartNullPointerException is thrown.
+    Object result = list.get(0);
+    Assert.assertNotNull(result.toString());
+  }
+
+
+  /**
+   * 为下一步的断言捕获参数,验证参数值
+   * 可以使用@Captor简化ArguemntCaptor的创建
+   * @return
+   */
+  @Test
+  public void testArgumentCaptor() {
+    List mock = mock(List.class);
+    mock.add(new Person("John", 12));
+//    ArgumentCaptor<Person> argument = ArgumentCaptor.forClass(Person.class);
+    // 参数捕获
+    verify(mock).add(argumentCaptor.capture());
+    assertEquals("John", argumentCaptor.getValue().getName());
+  }
+
+
   private ArgumentMatcher<String> isValid() {
     return argument -> true;
   }
 
   @Getter
   @Setter
+  @AllArgsConstructor
   static class Person {
 
     private String name;
