@@ -1,11 +1,13 @@
 package com.luogh.antlr;
 
 
+import java.util.Arrays;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class AntlrRunner {
@@ -103,5 +105,54 @@ public class AntlrRunner {
     CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
     com.luogh.antlr.DataParser parser = new com.luogh.antlr.DataParser(commonTokenStream);
     System.out.println(parser.file().toStringTree(parser));
+  }
+
+  /**
+   * lexer feature: lexical modes syntax.
+   * switch different mode when lexer sees special sentinel character sequences
+   */
+  @Test
+  public void testLexicalModelSyntax() throws Exception {
+    CharStream charStream = CharStreams.fromStream(ClassLoader.getSystemResourceAsStream("xml.testdata"));
+    com.luogh.antlr.XMLLexer lexer = new com.luogh.antlr.XMLLexer(charStream);
+    CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
+    commonTokenStream.fill();
+    /*
+     * token format:
+     * [@{TokenIndex},{start character index}: {stop character index}='{token text}',<{tokenType}>,{line index}:{character position within the line}]
+     *
+     * example: [@0,0:0='<',<1>,1:0]
+     */
+    commonTokenStream.getTokens().stream().forEach(System.out::println);
+  }
+
+  /**
+   * lexer feature: rewrite the input stream
+   */
+  @Test
+  public void testRewritingInputStreamUsingTokenStreamReWriter() throws Exception {
+    CharStream charStream = CharStreams.fromStream(ClassLoader.getSystemResourceAsStream("java8.testdata"));
+    com.luogh.antlr.Java8Lexer lexer = new com.luogh.antlr.Java8Lexer(charStream);
+    CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
+    com.luogh.antlr.Java8Parser parser = new com.luogh.antlr.Java8Parser(commonTokenStream);
+    ParseTreeWalker walker = new ParseTreeWalker(); // create standard walker
+    InsertSerialIDListener extractor = new InsertSerialIDListener(commonTokenStream);
+    walker.walk(extractor, parser.compilationUnit()); // initiate walk of tree with listener
+    System.out.println(extractor.getRewriter().getText());
+  }
+
+  /**
+   * lexer feature: sending tokens on different channels
+   * there are two channel :
+   *  1. default channel(id=0)
+   *  2. hidden channel (id=1)
+   */
+  @Test
+  public void testTokenChannel() throws Exception {
+    CharStream charStream = CharStreams.fromStream(ClassLoader.getSystemResourceAsStream("channel.testdata"));
+    com.luogh.antlr.ChannelExprLexer lexer = new com.luogh.antlr.ChannelExprLexer(charStream);
+    CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
+    commonTokenStream.fill();
+    Assert.assertArrayEquals(new String[]{"DEFAULT_TOKEN_CHANNEL", "HIDDEN"}, lexer.getChannelNames());
   }
 }
