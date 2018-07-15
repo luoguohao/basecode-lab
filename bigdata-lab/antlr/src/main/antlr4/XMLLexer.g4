@@ -26,8 +26,13 @@ SlashName   : '/' Name;
 Name        : ALPHA (ALPHA|DIGIT)*;
 S           : [ \t\r\n] -> skip;
 
+// fragment 表示该lexical 规则只能被其他lexical rule所引用,
+// 它本身不是token,因此不能被parser rule所引用
 fragment
 ALPHA       : [a-zA-Z];
 
 fragment
 DIGIT       : [0-9];
+
+fragment
+ESC         : '\\"' | '\\';
