@@ -18,6 +18,7 @@
       <module>hbase</module>
       <module>spark</module>
       <module>antlr</module>
+      <module>disruptor</module>
     </modules>
 
 </project>

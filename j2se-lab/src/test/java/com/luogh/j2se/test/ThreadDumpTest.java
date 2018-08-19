@@ -47,7 +47,7 @@ public class ThreadDumpTest {
 
     public void acquireLock() {
       synchronized (ThreadDumpTest.monitor) {
-        while(true) {
+        while (true) {
 
         }
       }
@@ -55,6 +55,7 @@ public class ThreadDumpTest {
   }
 
   private final class LockRequrier1 {
+
     public void acquireLock() throws Exception {
       synchronized (ThreadDumpTest.monitor) {
         Thread.sleep(500);
@@ -69,11 +70,13 @@ public class ThreadDumpTest {
 
 
   private final class LockRequrier2 {
+
     public void acquireLock() throws Exception {
       synchronized (ThreadDumpTest.monitor2) {
         Thread.sleep(500);
         synchronized (ThreadDumpTest.monitor) {
-          while(true) {}
+          while (true) {
+          }
         }
       }
     }

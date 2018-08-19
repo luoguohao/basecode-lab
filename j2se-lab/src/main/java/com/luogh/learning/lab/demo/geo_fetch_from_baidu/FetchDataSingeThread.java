@@ -43,18 +43,89 @@ public class FetchDataSingeThread {
 
 class ReaderResourceSingle {
 
-  private String filePath;
-
   public static final String ORIGIN_SEPERATOR = "\\s+";
   public static final String SEPERATOR = "\t";
-
   public static final Pattern IP_MATCH_PATTERN = Pattern
       .compile("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}");
   private static final String DUMP_FILE_PATH = "F://ip_json_03.txt";
   private static final String URL = "http://api.map.baidu.com/location/ip?ak=8M6nM3N18ToLxbUURVZe3IEM&coor=bd09ll";
+  private String filePath;
 
   public ReaderResourceSingle(String filePath) {
     this.setFilePath(filePath);
+  }
+
+  private static void resetJsonValue(JSONObject jsonObj, String key) {
+    jsonObj.put(key, decodeUnicode(jsonObj.getString(key)));
+  }
+
+  private static String decodeUnicode(String theString) {
+    if (theString == null || "".equals(theString.trim())) {
+      return "unkown";
+    }
+    char aChar;
+    int len = theString.length();
+    StringBuffer outBuffer = new StringBuffer(len);
+    for (int x = 0; x < len; ) {
+      aChar = theString.charAt(x++);
+      if (aChar == '\\') {
+        aChar = theString.charAt(x++);
+        if (aChar == 'u') {
+          int value = 0;
+          for (int i = 0; i < 4; i++) {
+            aChar = theString.charAt(x++);
+            switch (aChar) {
+              case '0':
+              case '1':
+              case '2':
+              case '3':
+              case '4':
+              case '5':
+              case '6':
+              case '7':
+              case '8':
+              case '9':
+                value = (value << 4) + aChar - '0';
+                break;
+              case 'a':
+              case 'b':
+              case 'c':
+              case 'd':
+              case 'e':
+              case 'f':
+                value = (value << 4) + 10 + aChar - 'a';
+                break;
+              case 'A':
+              case 'B':
+              case 'C':
+              case 'D':
+              case 'E':
+              case 'F':
+                value = (value << 4) + 10 + aChar - 'A';
+                break;
+              default:
+                throw new IllegalArgumentException(
+                    "Malformed  encoding.");
+            }
+          }
+          outBuffer.append((char) value);
+        } else {
+          if (aChar == 't') {
+            aChar = '\t';
+          } else if (aChar == 'r') {
+            aChar = '\r';
+          } else if (aChar == 'n') {
+            aChar = '\n';
+          } else if (aChar == 'f') {
+            aChar = '\f';
+          }
+          outBuffer.append(aChar);
+        }
+      } else {
+        outBuffer.append(aChar);
+      }
+    }
+    return outBuffer.toString();
   }
 
   public void fetcherJson(ResourceIP ip) throws Exception {
@@ -152,7 +223,6 @@ class ReaderResourceSingle {
     }
   }
 
-
   public void readResource() throws Exception {
     File file = new File(filePath);
     if (!file.exists()) {
@@ -233,89 +303,16 @@ class ReaderResourceSingle {
 
   }
 
-  enum FetcherCounter {
-    TOTAL_FETCH_CNT, FAILED_FETCH_CNT, SUCCESS_FETCH_CNT;
-  }
-
-  private static void resetJsonValue(JSONObject jsonObj, String key) {
-    jsonObj.put(key, decodeUnicode(jsonObj.getString(key)));
-  }
-
-  private static String decodeUnicode(String theString) {
-    if (theString == null || "".equals(theString.trim())) {
-      return "unkown";
-    }
-    char aChar;
-    int len = theString.length();
-    StringBuffer outBuffer = new StringBuffer(len);
-    for (int x = 0; x < len; ) {
-      aChar = theString.charAt(x++);
-      if (aChar == '\\') {
-        aChar = theString.charAt(x++);
-        if (aChar == 'u') {
-          int value = 0;
-          for (int i = 0; i < 4; i++) {
-            aChar = theString.charAt(x++);
-            switch (aChar) {
-              case '0':
-              case '1':
-              case '2':
-              case '3':
-              case '4':
-              case '5':
-              case '6':
-              case '7':
-              case '8':
-              case '9':
-                value = (value << 4) + aChar - '0';
-                break;
-              case 'a':
-              case 'b':
-              case 'c':
-              case 'd':
-              case 'e':
-              case 'f':
-                value = (value << 4) + 10 + aChar - 'a';
-                break;
-              case 'A':
-              case 'B':
-              case 'C':
-              case 'D':
-              case 'E':
-              case 'F':
-                value = (value << 4) + 10 + aChar - 'A';
-                break;
-              default:
-                throw new IllegalArgumentException(
-                    "Malformed  encoding.");
-            }
-          }
-          outBuffer.append((char) value);
-        } else {
-          if (aChar == 't') {
-            aChar = '\t';
-          } else if (aChar == 'r') {
-            aChar = '\r';
-          } else if (aChar == 'n') {
-            aChar = '\n';
-          } else if (aChar == 'f') {
-            aChar = '\f';
-          }
-          outBuffer.append(aChar);
-        }
-      } else {
-        outBuffer.append(aChar);
-      }
-    }
-    return outBuffer.toString();
-  }
-
   public String getFilePath() {
     return filePath;
   }
 
   public void setFilePath(String filePath) {
     this.filePath = filePath;
+  }
+
+  enum FetcherCounter {
+    TOTAL_FETCH_CNT, FAILED_FETCH_CNT, SUCCESS_FETCH_CNT;
   }
 
   enum IpCounter {

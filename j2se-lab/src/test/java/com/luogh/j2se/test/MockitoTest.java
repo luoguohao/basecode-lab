@@ -1,7 +1,6 @@
 package com.luogh.j2se.test;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -35,7 +34,6 @@ import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.Spy;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 import org.mockito.quality.Strictness;
@@ -43,27 +41,8 @@ import org.mockito.stubbing.Answer;
 
 public class MockitoTest {
 
-  @Mock
-  private Person person;
-
-  /** 参数捕获 **/
-  @Captor
-  private ArgumentCaptor<Person> argumentCaptor;
-
-  /** Instance for spying is created by calling constructor explicitly **/
-  @Spy
-  private List spy = new ArrayList(10);
-
-  /**
-   * Instance for spying is created by mockito via reflection (only default
-   * constructors supported)
-   **/
-  @Spy
-  private List spy2;
-
   @Rule
   public ExpectedException thrown = ExpectedException.none();
-
   /**
    * 用于初始化当前测试类中的使用@mock的对象 方案一：在测试类上：增加 @RunWith(MockitoJUnitRunner.Silent.class) 替换
    * 方案二：在测试类中：增加Rule
@@ -73,7 +52,23 @@ public class MockitoTest {
    */
   @Rule
   public MockitoRule rule = MockitoJUnit.rule().strictness(Strictness.LENIENT);
-
+  @Mock
+  private Person person;
+  /**
+   * 参数捕获
+   **/
+  @Captor
+  private ArgumentCaptor<Person> argumentCaptor;
+  /**
+   * Instance for spying is created by calling constructor explicitly
+   **/
+  @Spy
+  private List spy = new ArrayList(10);
+  /**
+   * Instance for spying is created by mockito via reflection (only default constructors supported)
+   **/
+  @Spy
+  private List spy2;
 
   @Test
   public void testSimpleMock() {
@@ -272,9 +267,7 @@ public class MockitoTest {
 
 
   /**
-   * 为连续的调用做测试桩(stub)
-   * 有时候需要为同一个函数调用的不同的返回值或异常做测试桩
-   * @return
+   * 为连续的调用做测试桩(stub) 有时候需要为同一个函数调用的不同的返回值或异常做测试桩
    */
   @Test
   public void testConsecutiveStub() {
@@ -301,7 +294,6 @@ public class MockitoTest {
 
   /**
    * 为回调做测试桩
-   * @return
    */
   @Test
   public void testCallback() {
@@ -317,12 +309,10 @@ public class MockitoTest {
   /**
    * doReturn() doThrow() doAnswer() doNothing() doCallRealMethod()方法的运用
    *
-   * 通过when(Object)为无返回值的函数打桩有不同的方法,因为编译器不喜欢void函数在括号内…
-   * 使用doThrow(Throwable) 替换stubVoid(Object)来为void函数打桩是为了与doAnswer()
-   * 等函数族保持一致性。
+   * 通过when(Object)为无返回值的函数打桩有不同的方法,因为编译器不喜欢void函数在括号内… 使用doThrow(Throwable)
+   * 替换stubVoid(Object)来为void函数打桩是为了与doAnswer() 等函数族保持一致性。
    *
    * 用于测试void函数
-   * @return
    */
   @Test
   public void testDoMethod() {
@@ -338,15 +328,9 @@ public class MockitoTest {
 
 
   /**
-   * 监控真实对象
-   * 你可以为真实对象创建一个监控(spy)对象。当你使用这个spy对象时真实的对象也会也调用，
-   * 除非它的函数被stub了。尽量少使用spy对象，使用时也需要小心形式，例如spy对象可以用
-   * 来处理遗留代码。
-   * Mockito并不会为真实对象代理函数调用，实际上他会拷贝真实对象。因此
-   * 如果你保留了真实对象，并且与之交互，不要期望从监控对象上得到正确的结果，
-   * 如果你在监控对象上调用一个没有被stub的函数，时并不会调用真实对象对应的函数
-   * 你不会在真实对象上看到任何效果
-   * @return
+   * 监控真实对象 你可以为真实对象创建一个监控(spy)对象。当你使用这个spy对象时真实的对象也会也调用， 除非它的函数被stub了。尽量少使用spy对象，使用时也需要小心形式，例如spy对象可以用
+   * 来处理遗留代码。 Mockito并不会为真实对象代理函数调用，实际上他会拷贝真实对象。因此 如果你保留了真实对象，并且与之交互，不要期望从监控对象上得到正确的结果，
+   * 如果你在监控对象上调用一个没有被stub的函数，时并不会调用真实对象对应的函数 你不会在真实对象上看到任何效果
    */
   @Test
   public void testSpy() {
@@ -380,7 +364,7 @@ public class MockitoTest {
     verify(spy).add("one");
     verify(spy).add("two");
 
-    assertEquals(1,list.size());
+    assertEquals(1, list.size());
   }
 
 
@@ -395,7 +379,6 @@ public class MockitoTest {
 
   /**
    * 修改没有测试桩的调用的默认返回值
-   * @return
    */
   @Test
   public void testDefaultReturnValue() {
@@ -409,9 +392,7 @@ public class MockitoTest {
 
 
   /**
-   * 为下一步的断言捕获参数,验证参数值
-   * 可以使用@Captor简化ArguemntCaptor的创建
-   * @return
+   * 为下一步的断言捕获参数,验证参数值 可以使用@Captor简化ArguemntCaptor的创建
    */
   @Test
   public void testArgumentCaptor() {

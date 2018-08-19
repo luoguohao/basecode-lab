@@ -22,6 +22,8 @@ import org.junit.Test;
 public class ReferenceTest {
 
 
+  private AtomicBoolean isRun = new AtomicBoolean(true);
+
   @Test
   public void testStrongReference() {
     Object reference = new Object();
@@ -32,17 +34,17 @@ public class ReferenceTest {
     assertNotNull(strongReference); // 强引用不会在gc中被回收
   }
 
-
   @Test
   public void testWeakReference() throws Exception {
     ReferenceQueue<String> referenceQueue = new ReferenceQueue<>();
     String reference = new String("test");
     WeakReference<String> weakReference = new WeakReference<>(reference, referenceQueue);
 
-    System.out.println("going to collect " + reference.toString() + "with hashcode " + reference.hashCode());
+    System.out.println(
+        "going to collect " + reference.toString() + "with hashcode " + reference.hashCode());
 
     new Thread(() -> {
-      while(isRun.get()) {
+      while (isRun.get()) {
         Object obj = referenceQueue.poll();
         if (obj != null) {
           try {
@@ -67,7 +69,6 @@ public class ReferenceTest {
     isRun.set(false);
   }
 
-
   @Test
   public void testWeakHashMapReference() throws Exception {
     Object key = new Object();
@@ -78,16 +79,14 @@ public class ReferenceTest {
     key = null;
     System.gc();
     Thread.sleep(1000); // 等待无效 entries 进入 ReferenceQueue 以便下一次调用 getTable 时被清理
-    assertFalse(weakHashMap.containsValue(value)); // 一旦没有指向 key 的强引用, WeakHashMap 在 GC 后将自动删除相关的 entry
+    assertFalse(
+        weakHashMap.containsValue(value)); // 一旦没有指向 key 的强引用, WeakHashMap 在 GC 后将自动删除相关的 entry
   }
 
-
   /**
-   * SoftReference于WeakReference的特性基本一致,最大的区别在于SoftReference会尽可能长的保留引用直到
-   * JVM 内存不足时才会被回收(虚拟机保证),这一特性使得SoftReference非常适合缓存应用
-   * SoftReference比WeakReference生命力更强，当JVM的内存不吃紧时，即使引用的对象被置为空了，Soft还可以
-   * 保留对该对象的引用，此时的JVM内存池实际上还保有原来对象，只有当内存吃紧的情况下JVM才会清除Soft的引用
-   * 对象，并且会在未来重新加载该引用的对象。而WeakReference则当清理内存池时会自动清理掉引用的对象。
+   * SoftReference于WeakReference的特性基本一致,最大的区别在于SoftReference会尽可能长的保留引用直到 JVM
+   * 内存不足时才会被回收(虚拟机保证),这一特性使得SoftReference非常适合缓存应用 SoftReference比WeakReference生命力更强，当JVM的内存不吃紧时，即使引用的对象被置为空了，Soft还可以
+   * 保留对该对象的引用，此时的JVM内存池实际上还保有原来对象，只有当内存吃紧的情况下JVM才会清除Soft的引用 对象，并且会在未来重新加载该引用的对象。而WeakReference则当清理内存池时会自动清理掉引用的对象。
    */
   @Test
   public void testSoftReference() throws Exception {
@@ -95,17 +94,19 @@ public class ReferenceTest {
     String reference = new String("test");
     SoftReference<String> softReference = new SoftReference<>(reference, referenceQueue);
 
-    System.out.println("going to collect " + reference.toString() + "with hashcode " + reference.hashCode());
+    System.out.println(
+        "going to collect " + reference.toString() + "with hashcode " + reference.hashCode());
 
     new Thread(() -> {
-      while(isRun.get()) {
+      while (isRun.get()) {
         Object obj = referenceQueue.poll();
         if (obj != null) {
           try {
             Field ref = Reference.class.getDeclaredField("referent");
             ref.setAccessible(true);
             Object result = ref.get(obj);
-            System.out.println("trying to collect " + result.toString() + "with hashcode " + result.hashCode());
+            System.out.println(
+                "trying to collect " + result.toString() + "with hashcode " + result.hashCode());
           } catch (Exception e) {
             e.printStackTrace();
           }
@@ -125,26 +126,25 @@ public class ReferenceTest {
     isRun.set(false);
   }
 
-
-  private AtomicBoolean isRun = new AtomicBoolean(true);
-
   @Test
   public void testPhantomReference() throws Exception {
     ReferenceQueue<String> referenceQueue = new ReferenceQueue<>();
     String reference = new String("test");
     PhantomReference<String> phantomReference = new PhantomReference<>(reference, referenceQueue);
 
-    System.out.println("going to collect " + reference.toString() + "with hashcode " + reference.hashCode());
+    System.out.println(
+        "going to collect " + reference.toString() + "with hashcode " + reference.hashCode());
 
     new Thread(() -> {
-      while(isRun.get()) {
+      while (isRun.get()) {
         Object obj = referenceQueue.poll();
         if (obj != null) {
           try {
             Field ref = Reference.class.getDeclaredField("referent");
             ref.setAccessible(true);
             Object result = ref.get(obj);
-            System.out.println("trying to collect " + result.toString() + "with hashcode " + result.hashCode());
+            System.out.println(
+                "trying to collect " + result.toString() + "with hashcode " + result.hashCode());
           } catch (Exception e) {
             e.printStackTrace();
           }
