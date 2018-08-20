@@ -3,3 +3,4 @@ bigdata-lab.iml
 /storm/storm.iml
 /finagle/finagle.iml
 target/
+/spark/spark.iml

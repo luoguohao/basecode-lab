@@ -19,6 +19,7 @@
       <module>spark</module>
       <module>antlr</module>
       <module>disruptor</module>
+      <module>flink</module>
     </modules>
 
 </project>

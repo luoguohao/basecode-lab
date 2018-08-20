@@ -25,10 +25,29 @@
     <jmock-junit4.version>2.6.0</jmock-junit4.version>
     <log4j2.version>2.4.1</log4j2.version>
     <slf4j.version>1.7.12</slf4j.version>
+    <MaxPermGen>512m</MaxPermGen>
+    <CodeCacheSize>512m</CodeCacheSize>
+    <scala.binary.version>2.11</scala.binary.version>
+    <scala.build.version>2.11.8</scala.build.version>
   </properties>
 
   <dependencyManagement>
     <dependencies>
+      <dependency>
+        <groupId>org.scala-lang</groupId>
+        <artifactId>scala-library</artifactId>
+        <version>2.11.8</version>
+      </dependency>
+      <dependency>
+        <groupId>org.scala-lang</groupId>
+        <artifactId>scala-compiler</artifactId>
+        <version>2.11.8</version>
+      </dependency>
+      <dependency>
+        <groupId>org.scala-lang</groupId>
+        <artifactId>scala-reflect</artifactId>
+        <version>2.11.8</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -109,6 +128,60 @@
 
   <build>
     <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>net.alchim31.maven</groupId>
+          <artifactId>scala-maven-plugin</artifactId>
+          <version>3.2.2</version>
+          <executions>
+            <execution>
+              <id>scala-compile-first</id>
+              <phase>process-resources</phase>
+              <goals>
+                <goal>compile</goal>
+              </goals>
+            </execution>
+            <execution>
+              <id>scala-test-compile-first</id>
+              <phase>process-test-resources</phase>
+              <goals>
+                <goal>testCompile</goal>
+              </goals>
+            </execution>
+            <execution>
+              <id>attach-scaladocs</id>
+              <phase>verify</phase>
+              <goals>
+                <goal>doc-jar</goal>
+              </goals>
+            </execution>
+          </executions>
+          <configuration>
+            <scalaVersion>${scala.build.version}</scalaVersion>
+            <recompileMode>incremental</recompileMode>
+            <useZincServer>true</useZincServer>
+            <checkMultipleScalaVersions>false</checkMultipleScalaVersions>
+            <args>
+              <arg>-unchecked</arg>
+              <arg>-deprecation</arg>
+              <arg>-feature</arg>
+            </args>
+            <javacArgs>
+              <javacArg>-source</javacArg>
+              <javacArg>${java_source_version}</javacArg>
+              <javacArg>-target</javacArg>
+              <javacArg>${java_target_version}</javacArg>
+              <javacArg>-Xlint:unchecked</javacArg>
+            </javacArgs>
+            <jvmArgs>
+              <jvmArg>-Xms1024m</jvmArg>
+              <jvmArg>-Xmx1024m</jvmArg>
+              <jvmArg>-XX:MaxPermSize=${MaxPermGen}</jvmArg>
+              <jvmArg>-XX:ReservedCodeCacheSize=${CodeCacheSize}</jvmArg>
+            </jvmArgs>
+          </configuration>
+        </plugin>
+      </plugins>
     </pluginManagement>
     <plugins>
       <plugin>
@@ -121,6 +194,7 @@
           <target>${java_target_version}</target>
         </configuration>
       </plugin>
+
     </plugins>
   </build>
 </project>
