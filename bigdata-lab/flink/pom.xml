@@ -11,50 +11,68 @@
   <artifactId>flink</artifactId>
 
   <properties>
-    <flink-version>1.6.0</flink-version>
+    <flink.version>1.6.0</flink.version>
   </properties>
 
   <dependencies>
     <dependency>
       <groupId>org.apache.flink</groupId>
       <artifactId>flink-clients_2.11</artifactId>
-      <version>${flink-version}</version>
+      <version>${flink.version}</version>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.apache.flink/flink-streaming-java -->
     <dependency>
       <groupId>org.apache.flink</groupId>
       <artifactId>flink-streaming-java_2.11</artifactId>
-      <version>${flink-version}</version>
+      <version>${flink.version}</version>
     </dependency>
 
     <dependency>
       <groupId>org.apache.flink</groupId>
       <artifactId>flink-java</artifactId>
-      <version>${flink-version}</version>
+      <version>${flink.version}</version>
     </dependency>
 
     <dependency>
       <groupId>org.apache.flink</groupId>
       <artifactId>flink-scala_2.11</artifactId>
-      <version>${flink-version}</version>
+      <version>${flink.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.flink</groupId>
       <artifactId>flink-streaming-scala_2.11</artifactId>
-      <version>${flink-version}</version>
+      <version>${flink.version}</version>
     </dependency>
 
     <dependency>
       <groupId>org.apache.flink</groupId>
       <artifactId>flink-core</artifactId>
-      <version>${flink-version}</version>
+      <version>${flink.version}</version>
     </dependency>
 
     <dependency>
       <groupId>org.apache.flink</groupId>
       <artifactId>flink-clients_2.11</artifactId>
-      <version>${flink-version}</version>
+      <version>${flink.version}</version>
     </dependency>
+
+    <dependency>
+      <groupId>org.apache.flink</groupId>
+      <artifactId>flink-connector-kafka-0.8_2.11</artifactId>
+      <version>${flink.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-log4j12</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+  <!--  <dependency>
+      <groupId>org.apache.flink</groupId>
+      <artifactId>flink-connector-kafka-0.10_2.11</artifactId>
+      <version>${flink.version}</version>
+    </dependency>-->
     <dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-library</artifactId>
@@ -67,6 +85,12 @@
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-reflect</artifactId>
     </dependency>
+
+    <dependency>
+      <groupId>org.apache.flink</groupId>
+      <artifactId>flink-connector-wikiedits_2.11</artifactId>
+      <version>${flink.version}</version>
+    </dependency>
   </dependencies>
 
   <build>
@@ -74,6 +98,82 @@
       <plugin>
         <groupId>net.alchim31.maven</groupId>
         <artifactId>scala-maven-plugin</artifactId>
+      </plugin>
+
+      <!-- build different JAR files -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <executions>
+          <!-- KMeans -->
+          <execution>
+            <id>WindowWordCountJava</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+
+            <configuration>
+              <classifier>WindowWordCountJava</classifier>
+
+              <archive>
+                <manifestEntries>
+                  <program-class>com.luogh.learning.lab.flink.WindowWordCount</program-class>
+                </manifestEntries>
+              </archive>
+
+              <includes>
+                <include>**/com/luogh/learning/lab/flink/WindowWordCount.class</include>
+                <include>**/com/luogh/learning/lab/flink/WindowWordCount$*.class</include>
+                <include>**/com/luogh/learning/lab/flink/WordCount.class</include>
+              </includes>
+            </configuration>
+          </execution>
+
+          <execution>
+            <id>WindowWordCountAppScala</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+            <configuration>
+              <classifier>WindowWordCountAppScala</classifier>
+
+              <archive>
+                <manifestEntries>
+                  <program-class>com.luogh.learning.lab.flink.WindowWordCountApp</program-class>
+                </manifestEntries>
+              </archive>
+
+              <includes>
+                <include>**/com/luogh/learning/lab/flink/WindowWordCountApp.class</include>
+                <include>**/com/luogh/learning/lab/flink/WindowWordCountApp$*.class</include>
+              </includes>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!--simplify the name of example JARs for build-target/examples -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>1.7</version>
+        <executions>
+          <execution>
+            <id>rename</id>
+            <phase>package</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <move file="${project.basedir}/target/flink-${project.version}-WindowWordCountAppScala.jar" tofile="${project.basedir}/target/WindowWordCountAppScala.jar" />
+                <move file="${project.basedir}/target/flink-${project.version}-WindowWordCountJava.jar" tofile="${project.basedir}/target/WindowWordCountJava.jar" />
+              </target>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
