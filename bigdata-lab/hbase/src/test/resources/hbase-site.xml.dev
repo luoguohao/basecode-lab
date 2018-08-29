@@ -23,18 +23,22 @@
 <configuration>
   <property>
     <name>hbase.rootdir</name>
-    <value>hdfs://namenode01.td.com/hbase</value>
+    <value>hdfs://172.23.4.247:9000/hbase</value>
   </property>
   <property>
     <name>hbase.cluster.distributed</name>
     <value>true</value>
   </property>
   <property>
-    　  <name>hbase.zookeeper.quorum</name> <!-- list of  zookooper -->
-    　　<value>zk01.td.com,zk02.td.com,zk03.td.com</value>
-    　</property>
-  <property>
-    <name>hbase.master.maxclockskew</name>
-    <value>180000</value>
+    <name>hbase.zookeeper.quorum</name>
+    <value>172.23.5.48,172.23.5.47,172.23.5.46</value>
   </property>
+  <property>
+    <name>dfs.replication</name>
+    <value>1</value>
+  </property>
+  　   <property>
+  <name>hbase.master.maxclockskew</name>
+  <value>180000</value>
+</property>
 </configuration>

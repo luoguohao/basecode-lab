@@ -1,5 +1,6 @@
 package com.luogh.learning.lab.flink
 
+import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.windowing.time.Time
 import org.apache.flink.streaming.connectors.wikiedits.WikipediaEditsSource
@@ -9,6 +10,8 @@ object WikipediaAnalysis {
 
   def main(args: Array[String]): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
+    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+
     env.addSource(new WikipediaEditsSource())
       .keyBy(x => x.getUser)
       .timeWindow(Time.seconds(5))

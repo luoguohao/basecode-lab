@@ -2,111 +2,89 @@ package com.luogh.learning.lab.flink
 
 import java.util.Properties
 
-import org.apache.flink.api.common.functions.ReduceFunction
+import com.alibaba.fastjson.JSON
+import org.apache.flink.api.common.functions.{AggregateFunction, ReduceFunction}
+import org.apache.flink.api.common.serialization.SimpleStringSchema
 import org.apache.flink.api.common.state.ReducingStateDescriptor
 import org.apache.flink.api.common.typeutils.TypeSerializer
 import org.apache.flink.api.common.typeutils.base.LongSerializer
-import org.apache.flink.streaming.api.TimeCharacteristic
+import org.apache.flink.api.java.utils.ParameterTool
+import org.apache.flink.configuration.Configuration
+import org.apache.flink.streaming.api.environment.CheckpointConfig.ExternalizedCheckpointCleanup
 import org.apache.flink.streaming.api.functions.AssignerWithPeriodicWatermarks
-import org.apache.flink.streaming.api.scala.function.WindowFunction
+import org.apache.flink.streaming.api.scala.function.{ProcessWindowFunction, WindowFunction}
 import org.apache.flink.streaming.api.scala.{StreamExecutionEnvironment, _}
 import org.apache.flink.streaming.api.watermark.Watermark
+import org.apache.flink.streaming.api.windowing.assigners.EventTimeSessionWindows
 import org.apache.flink.streaming.api.windowing.time.Time
 import org.apache.flink.streaming.api.windowing.triggers.{Trigger, TriggerResult}
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow
+import org.apache.flink.streaming.api.{CheckpointingMode, TimeCharacteristic}
 import org.apache.flink.streaming.connectors.fs.bucketing.BucketingSink
-import org.apache.flink.streaming.connectors.kafka.{FlinkKafkaConsumer010, FlinkKafkaConsumerBase}
+import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer010
 import org.apache.flink.streaming.connectors.wikiedits.WikipediaEditEvent
-import org.apache.flink.streaming.util.serialization.KeyedDeserializationSchema
 import org.apache.flink.util.Collector
 import org.apache.logging.log4j.scala.Logging
 
-object KafkaConsumerApp extends Logging {
+object KafkaConsumerWithWindowPreAggApp extends Logging {
 
   def main(args: Array[String]): Unit = {
     logger.info("application start ...")
 
+    val windowRange = ParameterTool.fromArgs(args).getLong("sessionWindowSizeInMinute", 1)
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     env.getConfig.setAutoWatermarkInterval(2000L)
-    env.enableCheckpointing(Time.minutes(10).toMilliseconds)
+    env.enableCheckpointing(Time.minutes(10).toMilliseconds, CheckpointingMode.EXACTLY_ONCE)
+    val checkPointConfig = env.getCheckpointConfig
+    checkPointConfig.enableExternalizedCheckpoints(ExternalizedCheckpointCleanup.RETAIN_ON_CANCELLATION)
 
     val properties = new Properties()
     properties.put("bootstrap.servers", "sz-pg-entps-dev-025.tendcloud.com:9092")
-    properties.put("group.id", "test5")
+    properties.put("group.id", "test1")
     properties.put("auto.offset.reset", "earliest")
-    properties.put(FlinkKafkaConsumerBase.KEY_PARTITION_DISCOVERY_INTERVAL_MILLIS, Time.minutes(1).toMilliseconds.toString)
 
-    env.setParallelism(1)
-
-
-    val schema = new ValueWithMetaDeserializationSchema[WikipediaEditEvent]()
-    val consumer = new FlinkKafkaConsumer010[ValueWithMeta[WikipediaEditEvent]]("wiki-.*".r.pattern, schema, properties)
-    val stream = env.addSource(consumer)
-      .map { event =>
-        logger.info(s"event topic:${event.topic}")
-        event.data
-      }
+    val stream = env.addSource(new FlinkKafkaConsumer010[String]("wiki-events", new SimpleStringSchema(), properties))
+      .map(event => JSON.parseObject(event, classOf[WikipediaEditEvent]))
       .assignTimestampsAndWatermarks(new TimestampWaterMarker(Time.seconds(10))) // 允许10秒乱序，watermark为当前接收到的最大事件时间戳减10秒
       .keyBy(_.getUser)
-
-      .timeWindow(Time.minutes(1))
-      //.window(EventTimeSessionWindows.withGap(Time.minutes(15)))
+      .window(EventTimeSessionWindows.withGap(Time.minutes(windowRange)))
       .allowedLateness(Time.seconds(5))
       .sideOutputLateData(OutputTag[WikipediaEditEvent]("late_data"))
       //      .trigger(EventTimeTrigger.create())
-      .trigger(EarlyTriggeringTrigger.every(Time.seconds(10))) // 缩短结果的反馈时间，实现每隔一段时间就触发一次计算
-      .apply(new WindowOperator())
+      .trigger(EarlyTriggeringTrigger.every(Time.seconds(10)))
+      .aggregate(new AggregateFunction[WikipediaEditEvent, (String, Long), (String, Long)] {
 
-    //    stream.connect(env.fromCollection(1 to 100)).process(new CoProcessFunction[String, Int, String] {
-    //
-    //      var receivedNewId: Int = _
-    //
-    //      override def processElement1(value: String, ctx: CoProcessFunction[String, Int, String]#Context, out: Collector[String]): Unit = {
-    //        logger.info(s"received new element ${value} with current receivedNewId:${receivedNewId}")
-    //        out.collect(s"${receivedNewId} -> ${value}")
-    //      }
-    //
-    //      /**
-    //        * element2 is configuration id
-    //        *
-    //        * @param value
-    //        * @param ctx
-    //        * @param out
-    //        */
-    //      override def processElement2(value: Int, ctx: CoProcessFunction[String, Int, String]#Context, out: Collector[String]): Unit = {
-    //        receivedNewId = value
-    //        logger.info(s"received new configuration id:${value}")
-    //      }
-    //    })
+        override def add(in: WikipediaEditEvent, acc: (String, Long)): (String, Long) = {
+          logger.debug(s"aggregate add opt:${in.getUser}, acc:${acc}")
+          (in.getUser, acc._2 + in.getByteDiff)
+        }
 
-    stream.addSink(new BucketingSink[String]("/Users/luogh/Code_Repository/luogh_repo/java_repo/basecode-lab/logs/result"))
+        override def createAccumulator(): (String, Long) = ("", 0)
+
+        override def getResult(acc: (String, Long)): (String, Long) = acc
+
+        override def merge(acc: (String, Long), acc1: (String, Long)): (String, Long) = {
+          logger.debug(s"aggregate merge opt: acc1:${acc}, acc2:${acc1} ")
+          (acc._1, acc._2 + acc1._2)
+        }
+      }, new ProcessWindowFunction[(String, Long), (String, Long), String, TimeWindow] {
+        override def process(key: String, context: Context, elements: Iterable[(String, Long)], out: Collector[(String, Long)]): Unit = {
+          logger.debug(s"window process opt => key:${key}, ${elements.seq.map(_._1).mkString(",")}")
+          elements.foreach(out.collect _)
+        }
+      }).uid("windowSessionFunction") // uid for the checkpoint & savepoint
+
+    stream.writeUsingOutputFormat(HbaseOutputFormat("wiki-event", new Configuration()))
 
     stream.getSideOutput(OutputTag[WikipediaEditEvent]("late_data"))
       .map(x => s"late_data:${x.getUser}")
-      .addSink(new BucketingSink[String]("/Users/luogh/Code_Repository/luogh_repo/java_repo/basecode-lab/logs/result_late_data"))
+      .map(_.toString)
+      .addSink(new BucketingSink[String]("/tmp/logs/result_late_data"))
 
     env.execute()
   }
 
-
-  class WindowOperator extends WindowFunction[WikipediaEditEvent, String, String, TimeWindow] {
-
-    override def apply(key: String, window: TimeWindow, input: Iterable[WikipediaEditEvent], out: Collector[String]): Unit = {
-      logger.debug(s"WindowOperator ===> key:${key}, window:${window}")
-      val sorted = input.toList.sortBy(_.getTimestamp)
-      val userSet = sorted.map(_.getUser).toSet
-      if (userSet.size > 1) {
-        throw new RuntimeException(s"not uniq user id:${userSet}")
-      }
-      val msg =
-        s"""key:${key}, window:[${window.getStart}, ${window.getEnd}],
-           | elements count:${input.size},
-           | elements time range:[${sorted.head.getTimestamp}, ${sorted.last.getTimestamp}]
-        """.stripMargin
-      out.collect(msg)
-    }
-  }
 
 
   class TimestampWaterMarker(time: Time) extends AssignerWithPeriodicWatermarks[WikipediaEditEvent] {
@@ -267,4 +245,3 @@ object KafkaConsumerApp extends Logging {
   }
 
 }
-

@@ -111,6 +111,30 @@ public class HbaseAdminTest {
 
 
   /**
+   * Hbase预分区
+   * @throws Exception
+   */
+  @Test
+  public void createTableWithPartitionKeyTest1() throws Exception {
+    try (Connection conn = ConnectionFactory.createConnection(configuration, executorService);
+        Admin admin = conn.getAdmin()) {
+//      admin.createNamespace(NamespaceDescriptor.create(TEST_PERF_SCHEMA_NAME).build());
+      TableName tableName = TableName.valueOf("wiki-event");
+      if (admin.tableExists(tableName)) {
+        admin.disableTable(tableName);
+        admin.deleteTable(tableName);
+      }
+
+      HTableDescriptor descriptor = new HTableDescriptor(tableName);
+      descriptor
+          .addFamily(new HColumnDescriptor("default"));
+      admin.createTable(descriptor,  getHexSplits(LOWEST_MD5_KEY, HIGHEST_MD5_KEY, 10));
+      log.info("table not exist, create new table {}.{} with two column {}, {}",
+          new String[]{TEST_PERF_SCHEMA_NAME, TEST_PERF_TABLE_NAME, READ_COLUMN_FAMILY, WRITE_COLUMN_FAMILY});
+    }
+  }
+
+  /**
    * rowkey进行md5加密后取大写，生成32位的字符
    * region split key 根据region个数来将md5的值平均划分
    * @param startKey 有效rowkey的最小可能值（此处默认为32位md5的最小值：00000000000000000000000000000000）
