@@ -11,5 +11,51 @@
 
   <artifactId>spark</artifactId>
 
+  <properties>
+    <spark.version>2.1.0</spark.version>
+    <livy.version>0.4.0-incubating</livy.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-sql_${scala.binary.version}</artifactId>
+      <version>${spark.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-log4j12</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-hive_${scala.binary.version}</artifactId>
+      <version>${spark.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-streaming_${scala.binary.version}</artifactId>
+      <version>${spark.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.livy</groupId>
+      <artifactId>livy-api</artifactId>
+      <version>${livy.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.livy</groupId>
+      <artifactId>livy-scala-api_${scala.binary.version}</artifactId>
+      <version>${livy.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.livy</groupId>
+      <artifactId>livy-client-http</artifactId>
+      <version>${livy.version}</version>
+    </dependency>
+
+  </dependencies>
 
 </project>
