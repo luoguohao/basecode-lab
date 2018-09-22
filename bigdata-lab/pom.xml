@@ -21,6 +21,7 @@
       <module>disruptor</module>
       <module>flink</module>
       <module>elasticsearch</module>
+      <module>scala-module</module>
     </modules>
 
   <properties>

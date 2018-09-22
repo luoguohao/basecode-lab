@@ -89,7 +89,7 @@ public class SimulateDataBulkloadData {
                     return ImmutablePair.of(fieldType.fieldKeyPrefix + "_" + randDimensionIndex, fieldType.simulateField(randDimensionIndex));
                   })
               .collect(Collectors.toMap(ImmutablePair::getLeft, ImmutablePair::getRight, (k1, k2) -> k1));
-          return new UserData(StringUtils.leftPad("0", 32), dimensions);
+          return new UserData(StringUtils.leftPad(id + "", 32, '0'), dimensions);
         })
         .forEach(userData -> {
           int currentRowNum = consumedRow.incrementAndGet();
