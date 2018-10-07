@@ -3,6 +3,7 @@ package com.luogh.learning.lab.flink
 import java.util.Properties
 
 import com.alibaba.fastjson.JSON
+import grizzled.slf4j.Logging
 import org.apache.flink.api.common.serialization.SimpleStringSchema
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.environment.CheckpointConfig.ExternalizedCheckpointCleanup
@@ -12,7 +13,6 @@ import org.apache.flink.streaming.api.windowing.time.Time
 import org.apache.flink.streaming.api.{CheckpointingMode, TimeCharacteristic}
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer010
 import org.apache.flink.streaming.connectors.wikiedits.WikipediaEditEvent
-import org.apache.logging.log4j.scala.Logging
 
 import scala.util.Try
 

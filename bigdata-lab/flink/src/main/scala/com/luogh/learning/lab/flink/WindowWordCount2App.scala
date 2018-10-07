@@ -1,8 +1,7 @@
 package com.luogh.learning.lab.flink
 
-import org.apache.flink.api.common.functions.RichMapFunction
 import org.apache.flink.api.common.state.MapStateDescriptor
-import org.apache.flink.streaming.api.functions.co.KeyedBroadcastProcessFunction
+import org.apache.flink.streaming.api.functions.co.{CoProcessFunction, KeyedBroadcastProcessFunction}
 import org.apache.flink.streaming.api.functions.source.SourceFunction
 import org.apache.flink.streaming.api.scala.function.ProcessWindowFunction
 import org.apache.flink.streaming.api.scala.{StreamExecutionEnvironment, createTypeInformation}
@@ -11,7 +10,7 @@ import org.apache.flink.util.Collector
 
 import scala.collection.JavaConverters._
 
-object WindowWordCountApp {
+object WindowWordCountApp2 {
 
   def main(args: Array[String]): Unit = {
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
@@ -21,22 +20,16 @@ object WindowWordCountApp {
       createTypeInformation[String],
       createTypeInformation[Int])
 
-    val config = env.addSource(new SourceFunction[(Int, Int)] {
-      override def run(ctx: SourceFunction.SourceContext[(Int, Int)]): Unit = {
+    val config = env.addSource(new SourceFunction[Int] {
+      override def run(ctx: SourceFunction.SourceContext[Int]): Unit = {
         while (true) {
           Thread.sleep(1000)
-          ctx.collect(((math.random * 1000).toInt -> 1))
+          ctx.collect((math.random * 1000).toInt)
         }
       }
 
       override def cancel(): Unit = {}
-    }).keyBy(_._1).map(new RichMapFunction[(Int, Int), Int] {
-      override def map(value: (Int, Int)): Int = {
-        val newV = value._1 + 1
-        getRuntimeContext.getMapState(state).put("a", newV)
-        newV
-      }
-    }).broadcast(state)
+    }).broadcast
 
     env.addSource(new SourceFunction[String] {
       override def run(ctx: SourceFunction.SourceContext[String]): Unit = {
@@ -61,21 +54,14 @@ object WindowWordCountApp {
       }
     }.keyBy(_._1)
       .connect(config)
-      .process(new KeyedBroadcastProcessFunction[String, (String, Int), Int, (String, Int)] {
-        override def processElement(value: (String, Int), ctx: KeyedBroadcastProcessFunction[String, (String, Int), Int, (String, Int)]#ReadOnlyContext, out: Collector[(String, Int)]): Unit = {
-          println(s"receive ELement:${value}")
-          val s = ctx.getBroadcastState(state)
-          s.immutableEntries().iterator().asScala.foreach { entry => println(s"broadcast entry: ${entry}") }
-          out.collect(value)
-        }
+      .process(new CoProcessFunction[(String, Int), Int, (String, Int)] {
+        override def processElement1(value: (String, Int), ctx: CoProcessFunction[(String, Int), Int, (String, Int)]#Context, out: Collector[(String, Int)]): Unit = ???
 
-        override def processBroadcastElement(value: Int, ctx: KeyedBroadcastProcessFunction[String, (String, Int), Int, (String, Int)]#Context, out: Collector[(String, Int)]): Unit = {
-          println(s"receive broadcast ELement:${value} in thread:${Thread.currentThread().getName}")
-          val s = ctx.getBroadcastState(state)
-          s.iterator().asScala.foreach { entry => println(s"---------------broadcast value: ${entry} in thread:${Thread.currentThread().getName}") }
-          s.put("a", value)
+        override def processElement2(value: Int, ctx: CoProcessFunction[(String, Int), Int, (String, Int)]#Context, out: Collector[(String, Int)]): Unit = {
+
         }
-      }).keyBy(_._1)
+      })
+      .keyBy(_._1)
       .countWindow(2)
       .process(new ProcessWindowFunction[(String, Int), (String, Int), String, GlobalWindow] {
         override def process(key: String, context: Context, elements: Iterable[(String, Int)], out: Collector[(String, Int)]): Unit = {
@@ -86,16 +72,16 @@ object WindowWordCountApp {
           elements.foreach(out.collect _)
         }
       })
-      //      .apply(new RichWindowFunction[(String, Int), (String, Int), String, GlobalWindow] {
-      //        override def apply(key: String, window: GlobalWindow, input: Iterable[(String, Int)], out: Collector[(String, Int)]): Unit = {
-      ////          getRuntimeContext.getBroadcastVariable[Any](state.getName)
-      ////            .listIterator().asScala
-      ////            .foreach(entry => println(s"window broadcast entry: ${entry}"))
-      //          println("=========== window ==============")
-      //          getRuntimeContext.getMapState(state).iterator().asScala.foreach(entry => println(s"window broadcast entry: ${entry}"))
-      //          input.foreach(out.collect _)
-      //        }
-      //      })
+//      .apply(new RichWindowFunction[(String, Int), (String, Int), String, GlobalWindow] {
+//        override def apply(key: String, window: GlobalWindow, input: Iterable[(String, Int)], out: Collector[(String, Int)]): Unit = {
+////          getRuntimeContext.getBroadcastVariable[Any](state.getName)
+////            .listIterator().asScala
+////            .foreach(entry => println(s"window broadcast entry: ${entry}"))
+//          println("=========== window ==============")
+//          getRuntimeContext.getMapState(state).iterator().asScala.foreach(entry => println(s"window broadcast entry: ${entry}"))
+//          input.foreach(out.collect _)
+//        }
+//      })
       .print().setParallelism(1)
 
     env.execute("Window WordCount")

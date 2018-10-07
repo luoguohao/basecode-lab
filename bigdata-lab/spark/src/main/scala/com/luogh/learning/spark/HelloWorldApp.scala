@@ -14,6 +14,8 @@ object HelloWorldApp {
 
     import sparkSession.implicits._
     rdd.toDF().show()
+
+    sparkSession.sparkContext.makeRDD(1 to 100).zipWithUniqueId().foreach(println _)
   }
 
 }

@@ -2,6 +2,7 @@ package com.luogh.learning.lab.flink
 
 import java.util.Properties
 
+import grizzled.slf4j.Logging
 import org.apache.flink.api.common.functions.ReduceFunction
 import org.apache.flink.api.common.state.ReducingStateDescriptor
 import org.apache.flink.api.common.typeutils.TypeSerializer
@@ -17,9 +18,7 @@ import org.apache.flink.streaming.api.windowing.windows.TimeWindow
 import org.apache.flink.streaming.connectors.fs.bucketing.BucketingSink
 import org.apache.flink.streaming.connectors.kafka.{FlinkKafkaConsumer010, FlinkKafkaConsumerBase}
 import org.apache.flink.streaming.connectors.wikiedits.WikipediaEditEvent
-import org.apache.flink.streaming.util.serialization.KeyedDeserializationSchema
 import org.apache.flink.util.Collector
-import org.apache.logging.log4j.scala.Logging
 
 object KafkaConsumerApp extends Logging {
 

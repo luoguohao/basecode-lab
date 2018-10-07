@@ -1,11 +1,10 @@
 package com.luogh.learning.lab.flink
 
+import grizzled.slf4j.Logging
 import org.apache.flink.streaming.api.environment.CheckpointConfig.ExternalizedCheckpointCleanup
-import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
+import org.apache.flink.streaming.api.scala.{StreamExecutionEnvironment, _}
 import org.apache.flink.streaming.api.windowing.time.Time
 import org.apache.flink.streaming.api.{CheckpointingMode, TimeCharacteristic}
-import org.apache.flink.streaming.api.scala._
-import org.apache.logging.log4j.scala.Logging
 
 object StateApp extends Logging {
 

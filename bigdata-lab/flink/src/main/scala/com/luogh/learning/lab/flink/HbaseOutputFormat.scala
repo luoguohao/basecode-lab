@@ -4,12 +4,12 @@ import java.io.IOException
 import java.util.concurrent.{ExecutorService, Executors}
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder
+import grizzled.slf4j.Logging
 import org.apache.flink.api.common.io.OutputFormat
 import org.apache.flink.configuration.Configuration
 import org.apache.hadoop.hbase.client.{Connection, ConnectionFactory, Put, Table}
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.hadoop.hbase.{HBaseConfiguration, TableName}
-import org.apache.logging.log4j.scala.Logging
 
 import scala.util.{Failure, Success, Try}
 
