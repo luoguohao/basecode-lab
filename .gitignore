@@ -2,3 +2,6 @@ basecode-lab.iml
 .idea
 *.iml
 /bigdata-lab/disruptor/disruptor.iml
+!/bigdata-lab/disruptor/logs/disruptor.log
+/logs/
+/bigdata-lab/spark/spark.iml

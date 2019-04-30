@@ -23,6 +23,7 @@
       <module>elasticsearch</module>
       <module>scala-module</module>
       <module>akka</module>
+      <module>bitmap</module>
     </modules>
 
   <properties>

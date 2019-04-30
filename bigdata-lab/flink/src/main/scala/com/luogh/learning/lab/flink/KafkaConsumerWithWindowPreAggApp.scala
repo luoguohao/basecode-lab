@@ -10,6 +10,7 @@ import org.apache.flink.api.common.state.{ReducingStateDescriptor, ValueStateDes
 import org.apache.flink.api.java.utils.ParameterTool
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.runtime.state.heap.{HeapReducingState, HeapValueState}
+import org.apache.flink.runtime.state.internal.InternalValueState
 import org.apache.flink.streaming.api.environment.CheckpointConfig.ExternalizedCheckpointCleanup
 import org.apache.flink.streaming.api.scala.function.ProcessWindowFunction
 import org.apache.flink.streaming.api.scala.{StreamExecutionEnvironment, _}
@@ -104,23 +105,20 @@ object KafkaConsumerWithWindowPreAggApp extends Logging {
           // to access the state stored in Trigger context for a arbitrary window, Currently to break
           // this limitation, a hack within the WindowFunction is effective, but not elegant right now.
 
-          val triggerType = context.globalState.getState(triggerTypeStat) match {
-            case state: HeapValueState[String @unchecked, TimeWindow @unchecked, TriggerType @unchecked] =>
+          val stat = context.globalState.getState(triggerTypeStat) match {
+            case state: InternalValueState[
+              String @unchecked,
+              TimeWindow @unchecked,
+              TriggerType @unchecked
+              ] =>
               state.setCurrentNamespace(window)
               state.value()
             case _ @ unsupportedState =>
               throw new RuntimeException(s"unsupported value state:${unsupportedState} right now, check.")
           }
-          logger.info(s"process(key=${key}, window=${context.window}) ===== triggerType:${triggerType}")
-          val stat = context.globalState.getReducingState(stateDesc)
-          stat match {
-            case value: HeapReducingState[String @unchecked, TimeWindow @unchecked, Long @unchecked] =>
-              value.setCurrentNamespace(window)
-            case _ =>
-              throw new RuntimeException(stat.toString)
-          }
+          logger.info(s"process(key=${key}, window=${context.window}) ===== triggerType:${stat}")
 
-          val result = stat.get
+          val result = stat
           logger.info(s"process(key=${key}, window=${context.window}) ===== state:${result}")
         }
       }).uid("windowSessionFunction") // uid for the checkpoint & savepoint

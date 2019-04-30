@@ -9,18 +9,15 @@
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
-  <artifactId>disruptor</artifactId>
+  <artifactId>bitmap</artifactId>
+
 
   <dependencies>
+    <!-- https://mvnrepository.com/artifact/org.roaringbitmap/RoaringBitmap -->
     <dependency>
-      <groupId>com.lmax</groupId>
-      <artifactId>disruptor</artifactId>
-      <version>3.4.2</version>
-    </dependency>
-    <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
-      <version>18.0</version>
+      <groupId>org.roaringbitmap</groupId>
+      <artifactId>RoaringBitmap</artifactId>
+      <version>0.7.10</version>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
@@ -46,6 +43,11 @@
       <groupId>org.slf4j</groupId>
       <artifactId>jul-to-slf4j</artifactId>
       <version>1.7.25</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-codec</groupId>
+      <artifactId>commons-codec</artifactId>
+      <version>1.9</version>
     </dependency>
   </dependencies>
 </project>

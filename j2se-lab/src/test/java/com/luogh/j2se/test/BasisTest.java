@@ -2,6 +2,8 @@ package com.luogh.j2se.test;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.ArrayDeque;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class BasisTest {
@@ -23,4 +25,25 @@ public class BasisTest {
     System.out.println(hostAddress);
   }
 
+  @Test
+  public void testArrayQueue() throws Exception {
+    ArrayDeque<Integer> queue = new ArrayDeque<>(10);
+    queue.add(10);
+  }
+
+  @Test
+  public void testIsPowerOf2() {
+    Assert.assertTrue(isPowerOf2(4));
+  }
+
+  @Test
+  public void testMod() {
+    int res = 6 % 4;
+    int res2 = 6 & (4 - 1);
+    Assert.assertEquals(res, res2);
+  }
+
+  private boolean isPowerOf2(int num) {
+    return (num & (num - 1)) == 0;
+  }
 }

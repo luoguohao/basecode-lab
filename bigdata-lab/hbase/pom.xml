@@ -23,10 +23,17 @@
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-server</artifactId>
       <!--<version>1.2.6</version>-->
-      <scope>test</scope>
        <version>1.1.5</version>
     </dependency>
 
+    <!-- https://mvnrepository.com/artifact/org.xerial.snappy/snappy-java -->
+    <dependency>
+      <groupId>org.xerial.snappy</groupId>
+      <artifactId>snappy-java</artifactId>
+      <version>1.1.7.3</version>
+      <type>jar</type>
+      <scope>compile</scope>
+    </dependency>
   </dependencies>
 
 </project>

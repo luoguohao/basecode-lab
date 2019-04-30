@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration monitorInterval="1" status="INFO" strict="true" name="LogConfig">
+  <Properties>
+    <Property name="logbasedir">logs</Property>
+    <Property name="log.layout">%d %p %class{1.} [%t] %m %ex%n</Property>
+  </Properties>
+  <Appenders>
+
+    <RandomAccessFile name="RandomAccessFile" fileName="${logbasedir}/disruptor.log"
+      immediateFlush="false" append="false">
+      <PatternLayout>
+        <Charset>UTF-8</Charset>
+        <Pattern>${log.layout}</Pattern>
+      </PatternLayout>
+    </RandomAccessFile>
+
+    <Console name = "STDOUT">
+      <PatternLayout pattern="${log.layout}"/>
+      <ThresholdFilter level="debug"/>
+    </Console>
+  </Appenders>
+
+  <Loggers>
+    <!-- pattern layout actually uses location, so we need to include it -->
+    <Logger name="com.luogh" level="debug" includeLocation="true">
+      <AppenderRef ref="RandomAccessFile"/>
+    </Logger>
+    <Root level="debug" includeLocation="true">
+      <AppenderRef ref="STDOUT"/>
+    </Root>
+  </Loggers>
+</Configuration>
