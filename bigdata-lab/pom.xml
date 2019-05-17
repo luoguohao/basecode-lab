@@ -24,6 +24,7 @@
       <module>scala-module</module>
       <module>akka</module>
       <module>bitmap</module>
+      <module>hive</module>
     </modules>
 
   <properties>
@@ -35,6 +36,24 @@
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-hdfs</artifactId>
+        <version>${hdfs.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-yarn-client</artifactId>
+        <version>${hdfs.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-mapreduce-client</artifactId>
+        <version>${hdfs.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-mapreduce-client-core</artifactId>
         <version>${hdfs.version}</version>
       </dependency>
 
