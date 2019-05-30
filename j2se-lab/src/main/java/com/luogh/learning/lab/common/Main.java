@@ -21,6 +21,18 @@ public class Main {
     }
   }
 
+  public synchronized void sync3() {
+    index++;
+  }
+
+  public void sync4() {
+    synchronized (this) {
+      synchronized (Main.class) {
+        System.out.println("test");
+      }
+    }
+  }
+
   public static void main(String[] args) {
     // Spawn a background thread to compute an enormous number.
     new Thread(){ @Override public void run() {

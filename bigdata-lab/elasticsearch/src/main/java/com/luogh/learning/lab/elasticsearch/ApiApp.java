@@ -240,7 +240,8 @@ public class ApiApp {
         })
         .setBulkActions(400) // execute the bulk every 400 requests
         .setBulkSize(new ByteSizeValue(5, ByteSizeUnit.MB))  // flush the bulk every 5mb
-        .setFlushInterval(TimeValue.timeValueSeconds(5)) //  flush the bulk every 5 seconds whatever the number of requests
+        .setFlushInterval(TimeValue
+            .timeValueSeconds(5)) //  flush the bulk every 5 seconds whatever the number of requests
         // Set the number of concurrent requests. A value of 0 means that only a single request will
         // be allowed to be executed. A value of 1 means 1 concurrent request is allowed to be executed
         // while accumulating new bulk requests.
@@ -278,7 +279,7 @@ public class ApiApp {
         .setTypes("index_test_type")
         .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
         .setQuery(QueryBuilders.termQuery("user", "tset2"))                 // Query
-        .setSource(SearchSourceBuilder.searchSource().fetchSource("postDate" , null))
+        .setSource(SearchSourceBuilder.searchSource().fetchSource("postDate", null))
         .get();
     log.info(response.toString());
   }
