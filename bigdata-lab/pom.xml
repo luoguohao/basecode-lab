@@ -25,6 +25,7 @@
       <module>akka</module>
       <module>bitmap</module>
       <module>hive</module>
+      <module>lucene</module>
     </modules>
 
   <properties>

@@ -1,0 +1,77 @@
+package com.luogh.learning.lab.lucene;
+
+import com.luogh.learing.lab.lucene.MetaphoneReplacementAnalyzer;
+import com.luogh.learing.lab.lucene.StopAnalyzer2;
+import com.luogh.learing.lab.lucene.StopAnalyzerFlawed;
+import com.luogh.learing.lab.lucene.util.AnalyzerUtils;
+import java.io.IOException;
+import java.io.StringReader;
+import junit.framework.TestCase;
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.SimpleAnalyzer;
+import org.apache.lucene.analysis.StopAnalyzer;
+import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.WhitespaceAnalyzer;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
+import org.apache.lucene.analysis.tokenattributes.TermAttribute;
+import org.apache.lucene.util.Version;
+
+public class AnalyzerTest extends TestCase {
+
+  private static final String[] examples = {"The quick brown fox jumped over the lazy dog",
+      "XY&Z Corporation - xyz@example.com"};
+  private static final Analyzer[] analyzers = new Analyzer[]{new WhitespaceAnalyzer(),
+      new SimpleAnalyzer(), new StopAnalyzer(Version.LUCENE_30),
+      new StandardAnalyzer(Version.LUCENE_30)};
+
+  public void testAnalyze() throws Exception {
+    for (String text : examples) {
+      analyze(text);
+    }
+  }
+
+  public void testAnalyzeDetailInfo() throws Exception {
+    for (String text : examples) {
+      for (Analyzer analyzer : analyzers) {
+        System.out.println(
+            "Using analyzer " + analyzer.getClass().getSimpleName() + " to analyze " + text);
+        AnalyzerUtils.displayTokensWithFullDetails(analyzer, text);
+      }
+    }
+  }
+
+
+  public void testStopAnalyzer2() throws Exception {
+    AnalyzerUtils.assertAnalyzesTo(new StopAnalyzer2(), "The quick brown...",
+        new String[]{"quick", "brown"});
+  }
+
+  public void testStopAnalyzerFlawed() throws Exception {
+    AnalyzerUtils.assertAnalyzesTo(new StopAnalyzerFlawed(), "The quick brown...",
+        new String[]{"the", "quick", "brown"});
+  }
+
+  public void testMetaPhoneAnalyzer() throws Exception {
+    MetaphoneReplacementAnalyzer analyzer = new MetaphoneReplacementAnalyzer();
+    AnalyzerUtils.displayTokens(analyzer, "The quick brown fox jumped over the lazy dog");
+    System.out.println();
+    AnalyzerUtils.displayTokens(analyzer, "Tha quik brown phox jumpd ovvar tha lazi dag");
+  }
+
+
+
+
+  private void analyze(String text) throws IOException {
+    System.out.println("Analyzing \"" + text + "\"");
+    for (Analyzer analyzer : analyzers) {
+      String name = analyzer.getClass().getSimpleName();
+      System.out.println(" " + name + ":");
+      System.out.print(" ");
+      AnalyzerUtils.displayTokens(analyzer, text);
+      System.out.println("\n");
+    }
+  }
+
+}
+
