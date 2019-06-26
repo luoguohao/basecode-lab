@@ -5,16 +5,16 @@ import com.luogh.learing.lab.lucene.StopAnalyzer2;
 import com.luogh.learing.lab.lucene.StopAnalyzerFlawed;
 import com.luogh.learing.lab.lucene.util.AnalyzerUtils;
 import java.io.IOException;
-import java.io.StringReader;
 import junit.framework.TestCase;
 import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.KeywordAnalyzer;
+import org.apache.lucene.analysis.PerFieldAnalyzerWrapper;
 import org.apache.lucene.analysis.SimpleAnalyzer;
 import org.apache.lucene.analysis.StopAnalyzer;
-import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.WhitespaceAnalyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
-import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
-import org.apache.lucene.analysis.tokenattributes.TermAttribute;
+import org.apache.lucene.queryParser.QueryParser;
+import org.apache.lucene.search.Query;
 import org.apache.lucene.util.Version;
 
 public class AnalyzerTest extends TestCase {
@@ -60,6 +60,13 @@ public class AnalyzerTest extends TestCase {
   }
 
 
+  public void testPerFieldAnalyzer() throws Exception {
+    PerFieldAnalyzerWrapper analyzer = new PerFieldAnalyzerWrapper(new SimpleAnalyzer());
+    analyzer.addAnalyzer("partnum", new KeywordAnalyzer());
+    Query query = new QueryParser(Version.LUCENE_30, "description", analyzer)
+        .parse("partnum:Q36 AND SPACE");
+    assertEquals("Q36 kept as-is", "+partnum:Q36 +space", query.toString("description"));
+  }
 
 
   private void analyze(String text) throws IOException {

@@ -340,5 +340,12 @@ public class BasicSearchingTest extends TestCase {
     searcher.close();
   }
 
+  public void testChinese() throws Exception {
+    Directory dir = TestUtil.getBookIndexDirectory();
+    IndexSearcher searcher = new IndexSearcher(dir);
+    Query query = new TermQuery(new Term("contents", "道"));
+    assertEquals("tao", 1, TestUtil.hitCount(searcher, query));
+  }
+
 }
 
