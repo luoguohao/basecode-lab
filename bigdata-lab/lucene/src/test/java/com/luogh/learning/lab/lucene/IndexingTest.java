@@ -7,11 +7,15 @@ import junit.framework.TestCase;
 import org.apache.lucene.analysis.WhitespaceAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
+import org.apache.lucene.document.MapFieldSelector;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.Term;
+import org.apache.lucene.search.FieldCache;
 import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.Query;
+import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.Directory;
@@ -151,5 +155,17 @@ public class IndexingTest extends TestCase {
     assertEquals(1, getHitCount("city", "Haag"));
   }
 
+  public void testFieldCache() throws Exception {
+    IndexReader reader = IndexReader.open(directory);
+    IndexSearcher searcher = new IndexSearcher(reader);
 
+    TopDocs hits = searcher.search(new MatchAllDocsQuery(), 10);
+    String[] index = FieldCache.DEFAULT.getStrings(reader, "id");
+
+    for (ScoreDoc doc : hits.scoreDocs) {
+      Document document = searcher.doc(doc.doc, new MapFieldSelector("id"));
+      assertEquals(index[doc.doc], document.getField("id").stringValue());
+    }
+
+  }
 }

@@ -1,7 +1,9 @@
 package com.luogh.learning.lab.lucene;
 
 import com.luogh.learing.lab.lucene.SynonymAnalyzer;
+import com.luogh.learing.lab.lucene.SynonymEngine;
 import com.luogh.learing.lab.lucene.TestSynonymEngine;
+import com.luogh.learing.lab.lucene.util.AnalyzerUtils;
 import com.luogh.learning.lab.lucene.common.TestUtil;
 import java.io.StringReader;
 import junit.framework.TestCase;
@@ -14,6 +16,7 @@ import org.apache.lucene.document.Field;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queryParser.QueryParser;
+import org.apache.lucene.search.FieldCache;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.PhraseQuery;
 import org.apache.lucene.search.Query;
@@ -84,4 +87,9 @@ public class SynonymAnalyzerTest extends TestCase {
         .println("With StandardAnalyzer, \"fox jumps\" parses to " + query.toString("content"));
   }
 
+  public void testWithSynonymPosition() throws Exception {
+    SynonymEngine engine = new TestSynonymEngine();
+    AnalyzerUtils.displayTokensWithPositions(new SynonymAnalyzer(engine),
+        "The quick brown fox jumps over the lazy dog");
+  }
 }

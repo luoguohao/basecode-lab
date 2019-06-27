@@ -25,6 +25,7 @@ import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.DateTools;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
+import org.apache.lucene.document.Field.Store;
 import org.apache.lucene.document.NumericField;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.store.Directory;
@@ -69,7 +70,7 @@ public class CreateTestIndex {
         Field.TermVector.WITH_POSITIONS_OFFSETS));   // 3
     doc.add(new Field("title2",                   // 3
         title.toLowerCase(),        // 3
-        Field.Store.YES,            // 3
+        Store.NO,            // 3
         Field.Index.NOT_ANALYZED_NO_NORMS,   // 3
         Field.TermVector.WITH_POSITIONS_OFFSETS));  // 3
 

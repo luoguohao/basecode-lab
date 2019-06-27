@@ -4,21 +4,36 @@ import com.alibaba.fastjson.JSON;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.luogh.learning.lab.tree.CommonConstants;
-import com.luogh.learning.lab.tree.Tree;
 import com.luogh.learning.lab.tree.Tree.NodeValeAggregator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import org.junit.Before;
-import org.junit.Test;
+import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.BenchmarkMode;
+import org.openjdk.jmh.annotations.Fork;
+import org.openjdk.jmh.annotations.Measurement;
+import org.openjdk.jmh.annotations.Mode;
+import org.openjdk.jmh.annotations.OutputTimeUnit;
+import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.Setup;
+import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.Threads;
+import org.openjdk.jmh.annotations.Warmup;
 
+@BenchmarkMode(Mode.AverageTime)
+@Warmup(iterations = 3)
+@Measurement(iterations = 10, time = 5, timeUnit = TimeUnit.SECONDS)
+@Threads(8)
+@Fork(2)
+@OutputTimeUnit(TimeUnit.MILLISECONDS)
+@State(value = Scope.Benchmark)
 public class TreeTest {
 
   private List<OriginData> singleNodeList = Lists.newArrayList();
 
-  @Before
+  @Setup
   public void init() {
     singleNodeList.add(new OriginData(-1, 0, null, 0, "测试:1", "1", null));
     singleNodeList.add(new OriginData(1, 0, -1, 0, "测试:1", "1",
@@ -35,7 +50,7 @@ public class TreeTest {
         ImmutableMap.of(CommonConstants.TREE_NODE_ITEM_COUNT_KEY, 4)));
   }
 
-  @Test
+  @Benchmark
   public void toTreeJson() throws Exception {
     Tree<OriginData, Integer, String> tree = new Tree.Builder<>(-1, 0, "树测试", singleNodeList)
         .withNodeId(OriginData::getId)

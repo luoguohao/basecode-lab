@@ -9,17 +9,22 @@ import org.apache.lucene.analysis.WhitespaceAnalyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
+import org.apache.lucene.document.MapFieldSelector;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.Term;
+import org.apache.lucene.queryParser.MultiFieldQueryParser;
 import org.apache.lucene.queryParser.QueryParser;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
+import org.apache.lucene.search.FieldCache;
 import org.apache.lucene.search.FuzzyQuery;
 import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.NumericRangeQuery;
 import org.apache.lucene.search.PrefixQuery;
 import org.apache.lucene.search.Query;
+import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TermRangeQuery;
 import org.apache.lucene.search.TopDocs;
@@ -345,6 +350,48 @@ public class BasicSearchingTest extends TestCase {
     IndexSearcher searcher = new IndexSearcher(dir);
     Query query = new TermQuery(new Term("contents", "道"));
     assertEquals("tao", 1, TestUtil.hitCount(searcher, query));
+  }
+
+  public void testFieldCache() throws Exception {
+    Directory dir = TestUtil.getBookIndexDirectory();
+    IndexReader reader = IndexReader.open(dir);
+    IndexSearcher searcher = new IndexSearcher(reader);
+
+    TopDocs hits = searcher.search(new MatchAllDocsQuery(), 10);
+    int[] index = FieldCache.DEFAULT.getInts(reader, "pubmonth");
+
+    for (ScoreDoc doc : hits.scoreDocs) {
+      Document document = searcher.doc(doc.doc, new MapFieldSelector("pubmonth"));
+      assertEquals(index[doc.doc], Integer.parseInt(document.getField("pubmonth").stringValue()));
+    }
+
+  }
+
+
+  public void testDefaultOperator() throws Exception {
+    Query query = new MultiFieldQueryParser(Version.LUCENE_30, new String[]{"title", "subject"},
+        new SimpleAnalyzer()).parse("development");
+    Directory dir = TestUtil.getBookIndexDirectory();
+    IndexSearcher searcher = new IndexSearcher(dir, true);
+    TopDocs hits = searcher.search(query, 10);
+    assertTrue(TestUtil.hitsIncludeTitle(searcher, hits, "Ant in Action"));
+    assertTrue(TestUtil.hitsIncludeTitle(searcher, hits, "Extreme Programming Explained"));
+    searcher.close();
+    dir.close();
+  }
+
+  public void testSpecifiedOperator() throws Exception {
+    Query query = MultiFieldQueryParser
+        .parse(Version.LUCENE_30, "lucene", new String[]{"title", "subject"},
+            new BooleanClause.Occur[]{BooleanClause.Occur.MUST, BooleanClause.Occur.MUST},
+            new SimpleAnalyzer());
+    Directory dir = TestUtil.getBookIndexDirectory();
+    IndexSearcher searcher = new IndexSearcher(dir, true);
+    TopDocs hits = searcher.search(query, 10);
+    assertTrue(TestUtil.hitsIncludeTitle(searcher, hits, "Lucene in Action, Second Edition"));
+    assertEquals("one and only one", 1, hits.scoreDocs.length);
+    searcher.close();
+    dir.close();
   }
 
 }
