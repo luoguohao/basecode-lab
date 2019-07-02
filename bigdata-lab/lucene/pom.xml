@@ -18,6 +18,27 @@
       <version>3.0.2</version>
     </dependency>
 
+    <!-- https://mvnrepository.com/artifact/berkeleydb/je -->
+    <dependency>
+      <groupId>berkeleydb</groupId>
+      <artifactId>je</artifactId>
+      <version>3.3.69</version>
+    </dependency>
+
+    <!-- https://mvnrepository.com/artifact/org.apache.lucene/lucene-bdb -->
+    <dependency>
+      <groupId>org.apache.lucene</groupId>
+      <artifactId>lucene-bdb</artifactId>
+      <version>3.0.2</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.lucene</groupId>
+      <artifactId>lucene-bdb-je</artifactId>
+      <version>3.0.2</version>
+    </dependency>
+
+
     <!-- https://mvnrepository.com/artifact/org.apache.lucene/lucene-analyzers-smartcn -->
     <dependency>
       <groupId>org.apache.lucene</groupId>

@@ -1,8 +1,8 @@
 package com.luogh.learning.lab.lucene;
 
-import com.luogh.learing.lab.lucene.MetaphoneReplacementAnalyzer;
-import com.luogh.learing.lab.lucene.StopAnalyzer2;
-import com.luogh.learing.lab.lucene.StopAnalyzerFlawed;
+import com.luogh.learing.lab.lucene.analyzer.MetaphoneReplacementAnalyzer;
+import com.luogh.learing.lab.lucene.analyzer.StopAnalyzer2;
+import com.luogh.learing.lab.lucene.analyzer.StopAnalyzerFlawed;
 import com.luogh.learing.lab.lucene.util.AnalyzerUtils;
 import java.io.IOException;
 import junit.framework.TestCase;

@@ -1,4 +1,4 @@
-package com.luogh.learing.lab.lucene;
+package com.luogh.learing.lab.lucene.analyzer;
 
 import java.io.IOException;
 

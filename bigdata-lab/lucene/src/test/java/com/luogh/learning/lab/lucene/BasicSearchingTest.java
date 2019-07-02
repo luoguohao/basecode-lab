@@ -1,12 +1,22 @@
 package com.luogh.learning.lab.lucene;
 
-import com.luogh.learing.lab.lucene.MetaphoneReplacementAnalyzer;
+import com.luogh.learing.lab.lucene.AllDocCollector;
+import com.luogh.learing.lab.lucene.BookLinkCollector;
+import com.luogh.learing.lab.lucene.CustomQueryParser;
+import com.luogh.learing.lab.lucene.NumericDateRangeQueryParser;
+import com.luogh.learing.lab.lucene.NumericRangeQueryParser;
+import com.luogh.learing.lab.lucene.analyzer.MetaphoneReplacementAnalyzer;
+import com.luogh.learing.lab.lucene.filter.SpecialsAccessor;
+import com.luogh.learing.lab.lucene.filter.SpecialsFilter;
 import com.luogh.learning.lab.lucene.common.TestUtil;
+import java.util.Locale;
+import java.util.Map;
 import junit.framework.TestCase;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.SimpleAnalyzer;
 import org.apache.lucene.analysis.WhitespaceAnalyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.document.DateTools;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.MapFieldSelector;
@@ -14,10 +24,13 @@ import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queryParser.MultiFieldQueryParser;
+import org.apache.lucene.queryParser.ParseException;
 import org.apache.lucene.queryParser.QueryParser;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.FieldCache;
+import org.apache.lucene.search.Filter;
+import org.apache.lucene.search.FilteredQuery;
 import org.apache.lucene.search.FuzzyQuery;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.MatchAllDocsQuery;
@@ -29,6 +42,7 @@ import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TermRangeQuery;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.search.WildcardQuery;
+import org.apache.lucene.search.spans.SpanNearQuery;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.RAMDirectory;
 import org.apache.lucene.util.Version;
@@ -393,6 +407,105 @@ public class BasicSearchingTest extends TestCase {
     searcher.close();
     dir.close();
   }
+
+  public void testCollecting() throws Exception {
+    Directory dir = TestUtil.getBookIndexDirectory();
+    TermQuery query = new TermQuery(new Term("contents", "junit"));
+    IndexSearcher searcher = new IndexSearcher(dir);
+    BookLinkCollector collector = new BookLinkCollector();
+    searcher.search(query, collector);
+    Map<String, String> linkMap = collector.getLinks();
+    assertEquals("ant in action", linkMap.get("http://www.manning.com/loughran"));
+    searcher.close();
+    dir.close();
+  }
+
+  public void testAllCollecting() throws Exception {
+    Directory dir = TestUtil.getBookIndexDirectory();
+    TermQuery query = new TermQuery(new Term("contents", "junit"));
+    IndexSearcher searcher = new IndexSearcher(dir);
+    AllDocCollector collector = new AllDocCollector();
+    searcher.search(query, collector);
+    collector.getHits().forEach(doc -> {
+      System.out.println("doc:" + doc.doc);
+    });
+
+    searcher.close();
+    dir.close();
+  }
+
+  public void testCustomQueryParser() {
+    CustomQueryParser parser = new CustomQueryParser(Version.LUCENE_30, "field", analyzer);
+    try {
+      parser.parse("a?t");
+      fail("Wildcard queries should not be allowed");
+    } catch (ParseException expected) {
+    }
+    try {
+      parser.parse("xunit~");
+      fail("Fuzzy queries should not be allowed");
+    } catch (ParseException expected) {
+    }
+  }
+
+  public void testNumericRangeQuery() throws Exception {
+    String expression = "price:[10 TO 20]";
+    QueryParser parser = new NumericRangeQueryParser(Version.LUCENE_30, "subject", analyzer);
+    Query query = parser.parse(expression);
+    System.out.println(expression + " parsed to " + query);
+  }
+
+  public void testDateRangeQuery() throws Exception {
+    String expression = "pubmonth:[01/01/2010 TO 06/01/2010]";
+
+    QueryParser parser = new NumericDateRangeQueryParser(Version.LUCENE_30, "subject", analyzer);
+    parser.setDateResolution("pubmonth", DateTools.Resolution.MONTH);
+    parser.setLocale(Locale.US);
+
+    Query query = parser.parse(expression);
+    System.out.println(expression + " parsed to " + query);
+
+    Directory dir = TestUtil.getBookIndexDirectory();
+    IndexSearcher searcher = new IndexSearcher(dir);
+    TopDocs matches = searcher.search(query, 10);
+    assertTrue("expecting at least one result !", matches.totalHits > 0);
+  }
+
+  public void testCustomPhraseQuery() throws Exception {
+    CustomQueryParser parser = new CustomQueryParser(Version.LUCENE_30, "field", analyzer);
+    Query query = parser.parse("singleTerm");
+    assertTrue("TermQuery", query instanceof TermQuery);
+    query = parser.parse("\"make phrase\"");
+    assertTrue("SpanNearQuery", query instanceof SpanNearQuery);
+  }
+
+  public void testCustomFilter() throws Exception {
+    String[] isbns = new String[]{"9780061142666", "9780394756820"};
+    SpecialsAccessor accessor = new TestSpecialsAccessor(isbns);
+    Filter filter = new SpecialsFilter(accessor);
+    TopDocs hits = new IndexSearcher(TestUtil.getBookIndexDirectory())
+        .search(new MatchAllDocsQuery(), filter, 10);
+    assertEquals("the specials", isbns.length, hits.totalHits);
+  }
+
+  public void testFilteredQuery() throws Exception {
+    String[] isbns = new String[]{"9780880105118"};
+    SpecialsAccessor accessor = new TestSpecialsAccessor(isbns);
+    Filter filter = new SpecialsFilter(accessor);
+    WildcardQuery educationBooks = new WildcardQuery(new Term("category", "*education*"));
+    FilteredQuery edBooksOnSpecial = new FilteredQuery(educationBooks, filter);
+
+    TermQuery logoBooks = new TermQuery(new Term("subject", "logo"));
+    BooleanQuery logoOrEdBooks = new BooleanQuery();
+    logoOrEdBooks.add(logoBooks, BooleanClause.Occur.SHOULD);
+    logoOrEdBooks.add(edBooksOnSpecial, BooleanClause.Occur.SHOULD);
+
+    TopDocs hits = new IndexSearcher(TestUtil.getBookIndexDirectory()).search(logoOrEdBooks, 10);
+    System.out.println(logoOrEdBooks.toString());
+
+    assertEquals("Papert and Steiner", 2, hits.totalHits);
+  }
+
 
 }
 

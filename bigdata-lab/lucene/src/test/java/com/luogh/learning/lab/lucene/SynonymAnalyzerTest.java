@@ -1,8 +1,8 @@
 package com.luogh.learning.lab.lucene;
 
-import com.luogh.learing.lab.lucene.SynonymAnalyzer;
-import com.luogh.learing.lab.lucene.SynonymEngine;
-import com.luogh.learing.lab.lucene.TestSynonymEngine;
+import com.luogh.learing.lab.lucene.analyzer.SynonymAnalyzer;
+import com.luogh.learing.lab.lucene.analyzer.SynonymEngine;
+import com.luogh.learing.lab.lucene.analyzer.TestSynonymEngine;
 import com.luogh.learing.lab.lucene.util.AnalyzerUtils;
 import com.luogh.learning.lab.lucene.common.TestUtil;
 import java.io.StringReader;
@@ -16,7 +16,6 @@ import org.apache.lucene.document.Field;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queryParser.QueryParser;
-import org.apache.lucene.search.FieldCache;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.PhraseQuery;
 import org.apache.lucene.search.Query;

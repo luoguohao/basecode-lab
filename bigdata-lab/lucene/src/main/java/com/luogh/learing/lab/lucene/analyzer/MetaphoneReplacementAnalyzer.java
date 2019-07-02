@@ -1,5 +1,6 @@
-package com.luogh.learing.lab.lucene;
+package com.luogh.learing.lab.lucene.analyzer;
 
+import com.luogh.learing.lab.lucene.MetaphoneReplacementFilter;
 import java.io.IOException;
 import java.io.Reader;
 import org.apache.lucene.analysis.Analyzer;

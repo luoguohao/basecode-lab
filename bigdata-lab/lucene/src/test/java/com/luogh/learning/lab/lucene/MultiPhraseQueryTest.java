@@ -1,7 +1,7 @@
 package com.luogh.learning.lab.lucene;
 
-import com.luogh.learing.lab.lucene.SynonymAnalyzer;
-import com.luogh.learing.lab.lucene.SynonymEngine;
+import com.luogh.learing.lab.lucene.analyzer.SynonymAnalyzer;
+import com.luogh.learing.lab.lucene.analyzer.SynonymEngine;
 import junit.framework.TestCase;
 import org.apache.lucene.analysis.WhitespaceAnalyzer;
 import org.apache.lucene.document.Document;
