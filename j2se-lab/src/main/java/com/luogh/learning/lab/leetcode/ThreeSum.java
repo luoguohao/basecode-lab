@@ -48,9 +48,11 @@ public class ThreeSum {
 
       while (m < k) {
         if (nums[i] + nums[m] <= 0) {
-          if ((k > m + 1 && nums[k] == nums[k - 1]) || nums[i] + nums[m] + nums[k] > 0) {
+
+          if ((k > m + 1 && nums[k] == nums[k - 1])/*考虑重复的问题*/ || nums[i] + nums[m] + nums[k] > 0) {
             k--;
-          } else if ((m < k - 1 && nums[m] == nums[m + 1]) || nums[i] + nums[m] + nums[k] < 0) {
+          } else if ((m < k - 1 && nums[m] == nums[m + 1])/*考虑重复的问题*/
+              || nums[i] + nums[m] + nums[k] < 0) {
             m++;
           } else {
             lists.add(Arrays.asList(nums[i], nums[m++], nums[k--]));

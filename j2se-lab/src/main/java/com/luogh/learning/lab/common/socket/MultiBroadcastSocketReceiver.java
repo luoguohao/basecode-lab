@@ -4,21 +4,17 @@ import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 
-public class MultiBroadcastSocket {
+public class MultiBroadcastSocketReceiver {
 
   public static void main(String[] args) throws Exception {
-    final MulticastSocket socket = createMulticastGroupAndJoin("225.0.0.100",
-        5000);  //加入组播组，设置组播组的监听端口为5000
-    new Thread(new Runnable() {
-      @Override
-      public void run() {
-        sendData(socket, "luanpeng".getBytes(), "225.0.0.100");  //向组播组发送数据
-      }
-    }).start();
-    String message = recieveData(socket, "225.0.0.100");//接收组播组传来的消息
-    System.out.println(message);
+    MultiBroadcastSocketReceiver broadcastSocket = new MultiBroadcastSocketReceiver();
+    final MulticastSocket socket = createMulticastGroupAndJoin("224.0.0.100",
+        8888);  //加入组播组，设置组播组的监听端口为8888
 
-    Thread.sleep(10000);
+    while (true) {
+      String message = recieveData(socket, "224.0.0.100");//接收组播组传来的消息
+      System.out.println("recieved data: " + message);
+    }
   }
 
   public static MulticastSocket createMulticastGroupAndJoin(String groupurl,
@@ -27,7 +23,7 @@ public class MultiBroadcastSocket {
     try {
       InetAddress group = InetAddress.getByName(groupurl); // 设置组播组的地址为239.0.0.0
       MulticastSocket socket = new MulticastSocket(port); // 初始化MulticastSocket类并将端口号与之关联
-      socket.setTimeToLive(1); // 设置组播数据报的发送范围为本地网络
+      socket.setTimeToLive(100); // 设置组播数据报的发送范围为本地网络
       socket.setSoTimeout(10000); // 设置套接字的接收数据报的最长时间
       socket.joinGroup(group); // 加入此组播组
       return socket;
