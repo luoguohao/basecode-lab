@@ -11,16 +11,6 @@ public class FourSum {
 
   public static void main(String[] args) {
 
-    int[] ar = new int[] { 7,1,7,-7,10,3,-5,-3,-9,6,-8,-6,-10,10,-3,4,2 };
-    Arrays.sort(ar);
-    for (int a : ar) {
-      System.out.print(a + ",");
-    }
-
-
-    System.out.println("....");
-
-
     new FourSum().fourSum(new int[]{1, 0, -1, 0, -2, 2}, 0).forEach(System.out::println);
     System.out.println("-----------");
     new FourSum().fourSum(new int[]{0, 1, 5, 0, 1, 5, 5, -4}, 11).forEach(System.out::println);
@@ -46,7 +36,8 @@ public class FourSum {
         int m = j + 1, k = nums.length - 1;
 
         while (m < k) {
-          if ((k <= nums.length - 2 && nums[k] == nums[k + 1]) || sum + nums[m] + nums[k] > target) {
+          if ((k <= nums.length - 2 && nums[k] == nums[k + 1])
+              || sum + nums[m] + nums[k] > target) {
             k--;
           } else if ((m > j + 2 && nums[m] == nums[m - 1]) || sum + nums[m] + nums[k] < target) {
             m++;
