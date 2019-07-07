@@ -1,7 +1,8 @@
 package com.luogh.learning.lab.common;
 
-import static jdk.internal.org.objectweb.asm.Type.getConstructorDescriptor;
-import static jdk.internal.org.objectweb.asm.Type.getMethodDescriptor;
+
+import static org.objectweb.asm.Type.getConstructorDescriptor;
+import static org.objectweb.asm.Type.getMethodDescriptor;
 
 import com.google.common.collect.Lists;
 import java.io.Serializable;
@@ -22,9 +23,10 @@ public class LambdaChecker {
     java.util.function.Function<Object, Boolean> func1 = Objects::isNull;
 
     for (Object obj : Lists.newArrayList(func1, func)) {
-      System.out.println("======" + obj.getClass() + "->" + (obj instanceof Serializable) + "=========");
+      System.out
+          .println("======" + obj.getClass() + "->" + (obj instanceof Serializable) + "=========");
       for (Method method : getAllDeclaredMethods(obj.getClass())) {
-        System.out.println( method.getModifiers()+ " " + method.getReturnType().getSimpleName()
+        System.out.println(method.getModifiers() + " " + method.getReturnType().getSimpleName()
             + " " + method.getName() + "(" + Arrays.stream(method.getParameterTypes()).map(
             Class::getSimpleName).collect(
             Collectors.joining()) + ")");
@@ -69,7 +71,6 @@ public class LambdaChecker {
       String className = serializedLambda.getImplClass(); // 对应到lambda中具体的实现类
       String methodName = serializedLambda.getImplMethodName(); // 对应到lambda中实现类的方法
       String methodSig = serializedLambda.getImplMethodSignature(); // 对应到lambda中实现类的方法签名
-
 
       Class<?> implClass = Class.forName(className.replace('/', '.'), true,
           Thread.currentThread().getContextClassLoader());

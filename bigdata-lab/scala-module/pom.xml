@@ -60,12 +60,14 @@
       <scope>test</scope>
     </dependency>
 
+    <!-- https://mvnrepository.com/artifact/org.specs2/specs2-core -->
     <dependency>
       <groupId>org.specs2</groupId>
-      <artifactId>specs2_${scala.binary.version}</artifactId>
+      <artifactId>specs2-core_2.11</artifactId>
       <version>3.7</version>
       <scope>test</scope>
     </dependency>
+
 
     <dependency>
       <groupId>org.scala-lang</groupId>
