@@ -101,7 +101,7 @@
       <dependency>
         <groupId>com.alibaba</groupId>
         <artifactId>fastjson</artifactId>
-        <version>1.2.49</version>
+        <version>1.2.62</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -207,7 +207,14 @@
           <target>${java_target_version}</target>
         </configuration>
       </plugin>
-
     </plugins>
   </build>
+
+  <repositories>
+    <repository>
+      <id>Sonatype Repository</id>
+      <name>Sonatype Repository</name>
+      <url>	https://oss.sonatype.org/content/repositories/releases/</url>
+    </repository>
+  </repositories>
 </project>

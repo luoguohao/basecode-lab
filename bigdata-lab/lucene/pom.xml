@@ -74,4 +74,12 @@
       <version>1.11</version>
     </dependency>
   </dependencies>
+
+  <repositories>
+        <repository>
+          <id>MetovaOndex Repository</id>
+          <name>MetovaOndex Repository</name>
+          <url>http://ondex.rothamsted.ac.uk/nexus/content/repositories/releases/</url>
+        </repository>
+  </repositories>
 </project>
