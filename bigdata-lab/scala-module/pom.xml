@@ -15,7 +15,7 @@
     <flink.version>1.5.3</flink.version>
     <hadoop.version>2.5.1</hadoop.version>
     <scala.binary.version>2.11</scala.binary.version>
-    <scala.build.version>2.11.12</scala.build.version>
+    <scala.build.version>2.13.1</scala.build.version>
     <kafka.connector.version>0.10</kafka.connector.version>
     <MaxPermGen>512m</MaxPermGen>
     <CodeCacheSize>512m</CodeCacheSize>

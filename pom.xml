@@ -29,7 +29,7 @@
     <MaxPermGen>512m</MaxPermGen>
     <CodeCacheSize>512m</CodeCacheSize>
     <scala.binary.version>2.11</scala.binary.version>
-    <scala.build.version>2.11.8</scala.build.version>
+    <scala.build.version>2.13.1</scala.build.version>
   </properties>
 
   <dependencyManagement>
