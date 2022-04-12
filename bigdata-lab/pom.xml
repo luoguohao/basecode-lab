@@ -29,7 +29,7 @@
     </modules>
 
   <properties>
-    <hdfs.version>2.6.0</hdfs.version>
+    <hdfs.version>3.2.3</hdfs.version>
   </properties>
 
   <dependencyManagement>
